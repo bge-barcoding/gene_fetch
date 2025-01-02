@@ -22,13 +22,12 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequ
 - 'Checkpointing' available: If the script fails during a run, it can be rerun using the same commands/inputs and it will skip IDs with entries already in the sequence_references.csv and with .fasta files already present in the output directory.
 
 ### samples.csv input file example
-- Only 'ID' and 'taxid' columns are essential.
 | ID | forward | reverse | taxid |
 | --- | --- | --- | --- |
 | BSNHM002-24  | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 177658 |
 | BSNHM038-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 177627 |
 | BSNHM046-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 3084599 |
-
+- Only 'ID' and 'taxid' columns are essential.
 ### Running gene_fetch.py on a cluster
 - See 1_gene_fetch.sh (for running via Slurm).
 
