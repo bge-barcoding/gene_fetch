@@ -10,7 +10,7 @@
 #activate conda env
 source ~/miniconda3/etc/profile.d/conda.sh
 conda init bash
-conda activate gene_fetch
+conda activate fetch
 
 
 GENE=cox1
