@@ -28,6 +28,7 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequ
 | BSNHM038-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 177627 |
 | BSNHM046-24 | abs/path/to/R1.fq.gz | abs/path/to/R2.fq.gz | 3084599 |
 - Only 'ID' and 'taxid' columns are essential.
+
 ### Running gene_fetch.py on a cluster
 - See 1_gene_fetch.sh (for running via Slurm).
 
