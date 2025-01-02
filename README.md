@@ -21,6 +21,8 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequ
 ```
 - 'Checkpointing' available: If the script fails during a run, it can be rerun using the same commands/inputs and it will skip IDs with entries already in the sequence_references.csv and with .fasta files already present in the output directory.
 
+### Running gene_fetch.py on a cluster
+- See 1_gene_fetch.sh
 
 ## Output Structure
 ```
@@ -36,8 +38,6 @@ output_dir/
 └── gene_fetch.log          # Operation log
 ```
 ### sequence_references.csv output example
-
-**sequence_references.csv example** 
 | ID | taxid | protein_accession | protein_length | nucleotide_accession | nucleotide_length | matched_rank | ncbi_taxonomy | reference_name | protein_reference_path | nucleotide_reference_path |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | BSNHM002-24 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus: Apatania | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | abs/path/to/protein_references/BSNHM002-24_dna.fasta |
