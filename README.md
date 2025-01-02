@@ -22,7 +22,7 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequ
 - 'Checkpointing' available: If the script fails during a run, it can be rerun using the same commands/inputs and it will skip IDs with entries already in the sequence_references.csv and with .fasta files already present in the output directory.
 
 ### Running gene_fetch.py on a cluster
-- See 1_gene_fetch.sh
+- See 1_gene_fetch.sh (for running via Slurm).
 
 ## Output Structure
 ```
