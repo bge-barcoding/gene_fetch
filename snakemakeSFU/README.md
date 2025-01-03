@@ -51,10 +51,10 @@ snakemake --snakefile ./workflow/Snakefile --configfile ./config/config.yaml --c
 ```
 
 ## Main Rules:
-a) fetch_gene_sequences (using gene_fetch.py):
+- a) fetch_gene_sequences (using gene_fetch.py):
    - Handles gene-specific sequence retrieval
    - Outputs sequence references and logs per gene
-b) fetch_organelle_sequences:
+- b) fetch_organelle_sequences:
    - Processes organelle/ribosomal sequences
    - Creates temporary working directories for reorganised (relative to original go_fetch.py) output directory structure
    - Implements 3-retry logic with random backoff for NCBI API usage
@@ -62,7 +62,7 @@ b) fetch_organelle_sequences:
    - Maintains global and sample-specific logs
 
 
-### Output Organisation (for fetch_organelle_sequences/go_fetch.py):
+### a) Output Organisation (for fetch_organelle_sequences/go_fetch.py):
 ```
 results/
 ├── {target_type}/
@@ -77,7 +77,7 @@ results/
     └── go_fetch-{run_name}-{target_type}-{ID}-{taxid}.log
 ```
 
-### Output Organisation (for fetch_gene_sequences/gene_fetch.py):
+### b) Output Organisation (for fetch_gene_sequences/gene_fetch.py):
 ```
 results/
 ├── {gene}/
@@ -89,9 +89,9 @@ results/
 ```
 
 ### Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a Pull Request
 
 ### Authors and citations
 - gene_fetch.py written and conceptualised by Dan Parsons and Ben Price @ NHMUK
-- go_fetch.py written and conceptualised by Ollie White @ NHMUK
+- go_fetch.py written and conceptualised by Ollie White and Ben Price @ NHMUK
 - snakemake workflow produced by Dan Parsons
