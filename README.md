@@ -20,7 +20,7 @@ python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequ
   --nucleotide_size: Minimum nucleotide sequence length (default: 1500). Optional.
 ```
 - 'Checkpointing' available: If the script fails during a run, it can be rerun using the same commands/inputs and it will skip IDs with entries already in the sequence_references.csv and with .fasta files already present in the output directory.
-- fetch.yaml contains all necessary dependencies to run the script. Can create conda env using commmand below (once conda is installed on your system).
+- ./snakemakeSFU/workflow/envs/fetch.yaml contains all necessary dependencies to run the script. Can create conda env using commmand below (once conda is installed on your system).
 ```
 conda env create -f fetch.yaml
 ```
