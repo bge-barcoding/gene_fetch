@@ -1,4 +1,4 @@
-# Gene Fetch Ultra
+# SeqFetchUltra (SFU)
 A robust Snakemake workflow for automated retrieval and processing of genetic sequences from NCBI. Designed for both small and large-scale sequence retrieval tasks, with built-in safeguards for API rate limits and comprehensive data validation.
 
 ## Overview
@@ -87,3 +87,11 @@ results/
 └── logs/
     └── gene_fetch-{run_name}-{gene}.log
 ```
+
+### Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Authors and citations
+- gene_fetch.py written and conceptualised by Dan Parsons and Ben Price @ NHMUK
+- go_fetch.py written and conceptualised by Ollie White @ NHMUK
+- snakemake workflow produced by Dan Parsons
