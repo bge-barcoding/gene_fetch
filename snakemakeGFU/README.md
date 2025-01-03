@@ -1,21 +1,50 @@
-This Snakemake workflow automates the fetching and processing of genetic sequences from NCBI, suitable for both small and large-scale sequence retrieval tasks, with built-in safeguards for API rate limits and data validation. The workflow supporting two main modes:
-- Gene-specific sequence retrieval (e.g., barcoding genes).
-- Organelle/ribosomal sequence retrieval (e.g., mitochondrial, chloroplast, or ribosomal).
+# Gene Fetch Ultra
+A robust Snakemake workflow for automated retrieval and processing of genetic sequences from NCBI. Designed for both small and large-scale sequence retrieval tasks, with built-in safeguards for API rate limits and comprehensive data validation.
+
+## Overview
+This workflow supports two modes of operation:
+1. **Gene-specific sequence retrieval**
+   - Ideal for barcoding genes and similar targeted sequence retrieval
+   - Configurable sequence criteria and filtering
+2. **Organelle/ribosomal sequence retrieval**
+   - Supports mitochondrial, chloroplast, and ribosomal sequences
+   - Automated sequence validation and organisation
+
 
 ## Key Features:
-- Configurable via YAML file
-- Supports batch processing via samples CSV
-- Implements error handling and retry logic necessary for robust NCBI API usage
-- Maintains organised output directory structure (see below)
-- Handles temporary files with cleanup
-- Provides comprehensive per-sample logging
+- 🛠️ Configurable via YAML file
+- 📊 Batch processing through samples CSV
+- 🔄 Robust NCBI API error handling and retry logic
+- 📁 Organised output directory structure (see below)
+- 🧹 Temporary file management
+- 📝 Comprehensive per-sample logging
+
+
+## Prerequisites
+- Activate conda environment (created with fetch.yaml)
+- NCBI account (for API key)
+- Conda or Mamba package manager
+
+
+## Installation
+Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/gene-fetch-ultra.git
+   cd gene-fetch-ultra
+  conda env create -f envs/fetch.yaml
+  conda activate fetch
+  ```
+
 
 ## Workflow Structure:
 - Input Requirements:
-  - Configuration file (config.yaml)
+  - Configuration file (config/config.yaml) containing workflow parameters, API credentials, and target sequence criteria
   - Samples CSV file with ID and taxid columns
   - Email and API key for NCBI access
   - Conda environment with required dependencies
+- Run using run_snakefile.sh (if using cluster), or ```bash
+    snakemake --use-conda --cores <n>
+    ```
 
 ## Main Rules:
 a) fetch_gene_sequences (using gene_fetch.py):
@@ -44,7 +73,7 @@ results/
     └── go_fetch-{run_name}-{target_type}-{ID}-{taxid}.log
 ```
 
-### Output Organisation (for fetch_gene_sequences/ gene_fetch.py):
+### Output Organisation (for fetch_gene_sequences/gene_fetch.py):
 ```
 results/
 ├── {gene}/
