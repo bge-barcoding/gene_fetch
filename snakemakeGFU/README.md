@@ -47,7 +47,7 @@ Create and activate conda environment:
   - Conda environment with required dependencies
 - Run using run_snakefile.sh (if using cluster), or:
    ```bash
-   snakemake --use-conda --cores <n>
+   snakemake --snakefile ./workflow/Snakefile --configfile ./config/config.yaml --cores <n>
    ```
 
 ## Main Rules:
