@@ -46,9 +46,9 @@ Create and activate conda environment:
   - Email and API key for NCBI access
   - Conda environment with required dependencies
 - Run using run_snakefile.sh (if using cluster), or:
-   ```bash
-   snakemake --snakefile ./workflow/Snakefile --configfile ./config/config.yaml --cores <n>
-   ```
+```bash
+snakemake --snakefile ./workflow/Snakefile --configfile ./config/config.yaml --cores <n>
+```
 
 ## Main Rules:
 a) fetch_gene_sequences (using gene_fetch.py):
