@@ -30,6 +30,7 @@ b) fetch_organelle_sequences:
 
 
 ### Output Organisation (for fetch_organelle_sequences/go_fetch.py):
+```
 results/
 ├── {target_type}/
 │   └── {run_name}/
@@ -41,9 +42,10 @@ results/
 │               └── go_fetch.log
 └── logs/
     └── go_fetch-{run_name}-{target_type}-{ID}-{taxid}.log
-
+```
 
 ### Output Organisation (for fetch_gene_sequences/ gene_fetch.py):
+```
 results/
 ├── {gene}/
 │   └── {run_name}/
@@ -51,3 +53,4 @@ results/
 │       └── gene_fetch.log
 └── logs/
     └── gene_fetch-{run_name}-{gene}.log
+```
