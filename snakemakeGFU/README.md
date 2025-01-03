@@ -31,9 +31,12 @@ Clone the repository:
    ```bash
    git clone https://github.com/yourusername/gene-fetch-ultra.git
    cd gene-fetch-ultra
-  conda env create -f envs/fetch.yaml
-  conda activate fetch
-  ```
+   ```
+Create and activate conda environment:
+   ```
+   conda env create -f envs/fetch.yaml
+   conda activate fetch
+   ```
 
 
 ## Workflow Structure:
@@ -42,9 +45,10 @@ Clone the repository:
   - Samples CSV file with ID and taxid columns
   - Email and API key for NCBI access
   - Conda environment with required dependencies
-- Run using run_snakefile.sh (if using cluster), or ```bash
-    snakemake --use-conda --cores <n>
-    ```
+- Run using run_snakefile.sh (if using cluster), or:
+   ```bash
+   snakemake --use-conda --cores <n>
+   ```
 
 ## Main Rules:
 a) fetch_gene_sequences (using gene_fetch.py):
