@@ -1,0 +1,16 @@
+# envs/fetch.yaml
+name: fetch
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - python=3.11
+  - snakemake=7.32.4
+  - biopython=1.84
+  - requests>=3.32.3
+  - pandas
+  - trf  
+  - getorganelle>=1.7.7.1
+  - pip
+  - pip:
+    - ratelimit>=2.2.1
