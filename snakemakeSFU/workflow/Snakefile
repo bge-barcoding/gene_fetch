@@ -4,9 +4,7 @@ import sys
 import pandas as pd
 from datetime import datetime
 
-
 configfile: "config.yaml"
-
 
 # Read samples CSV
 if os.path.exists(config["samples_csv"]):
@@ -17,8 +15,7 @@ else:
 def get_taxid(wildcards):
     return sample_data.loc[wildcards.ID, "taxid"]
 
-
-# Config validation
+# Validation functions
 def validate_config():
     """Validate configuration based on target type"""
     target_type = config["target_config"]["target_type"]
@@ -47,13 +44,41 @@ def validate_config():
     if "run_name" not in config:
         raise ValueError("run_name must be specified in config.yaml")
 
-# Validate config
+# Validate configuration
 validate_config()
 
-
+#def get_final_outputs(wildcards):
+#    """Determine final outputs based on target type"""
+#    outputs = []
+#    target_type = config["target_config"]["target_type"]
+#    run_name = config["run_name"]
+#    
+#    if target_type == "gene":
+#        # Handle gene targets
+#        for gene in config["target_config"]["gene_params"]["gene_names"]:
+#            gene_dir = os.path.join("results", gene, run_name)
+#            outputs.extend([
+#                os.path.join(gene_dir, "sequence_references.csv"),
+#                os.path.join(gene_dir, "gene_fetch.log")
+#            ])
+#    else:
+#        # Handle organelle/ribosomal targets
+#        for sample_id in sample_data.index:
+#            target_dir = os.path.join("results", target_type, run_name, sample_id)
+#            if config["target_config"]["fetch_params"]["getorganelle"]:
+#                outputs.extend([
+#                    os.path.join(target_dir, "seed.fasta"),
+#                    os.path.join(target_dir, "gene.fasta")
+#                ])
+#            else:
+#                outputs.extend([
+#                    os.path.join(target_dir, "fasta"),
+#                    os.path.join(target_dir, "genbank")
+#                ])
+#    return outputs
 
 def get_final_outputs(wildcards):
-    """Determine final outputs based on target_type"""
+    """Determine final outputs based on target type"""
     outputs = []
     target_type = config["target_config"]["target_type"]
     run_name = config["run_name"]
@@ -86,11 +111,9 @@ def get_final_outputs(wildcards):
                 ])
     return outputs
 
-
 rule all:
     input:
         get_final_outputs
-
 
 rule fetch_gene_sequences:
     output:
@@ -124,8 +147,47 @@ rule fetch_gene_sequences:
         echo "gene_fetch successfully completed for gene {wildcards.gene}" >> {log}
         """
 
+#PREVIOUS VERSION OF RULE
+#rule fetch_organelle_sequences:
+#    output:
+#        seed = os.path.join("results", config["target_config"]["target_type"], config["run_name"], "{ID}",
+#               "seed.fasta" if config["target_config"]["fetch_params"]["getorganelle"] else "fasta"),
+#        gene = os.path.join("results", config["target_config"]["target_type"], config["run_name"], "{ID}",
+#               "gene.fasta" if config["target_config"]["fetch_params"]["getorganelle"] else "genbank")
+#    params:
+#        output_dir = lambda wildcards: os.path.join("results", config["target_config"]["target_type"], config["run_name"], "{ID}"),
+#        target_type = config["target_config"]["target_type"],
+#        min_seq = config["target_config"]["fetch_params"]["min_sequences"],
+#        max_seq = config["target_config"]["fetch_params"]["max_sequences"],
+#        email = config["email"],
+#        api_key = config["api_key"],
+#        getorganelle = "--getorganelle" if config["target_config"]["fetch_params"].get("getorganelle", False) else "",
+#        database = config["target_config"]["fetch_params"]["database"],
+#        taxid = lambda wildcards: get_taxid(wildcards)
+#    log:
+#        os.path.join("logs", f"go_fetch-{config['run_name']}-{config['target_config']['target_type']}-{{ID}}.log")
+#    conda:
+#        "envs/fetch.yaml"
+#    shell:
+#        """
+#        python ./workflow/scripts/go_fetch.py \
+#            --taxonomy {params.taxid} \
+#            --target {params.target_type} \
+#            --db {params.database} \
+#            --min {params.min_seq} \
+#            --max {params.max_seq} \
+#            --output {params.output_dir} \
+#            --email {params.email} \
+#            --api {params.api_key} \
+#            {params.getorganelle} \
+#            --overwrite \
+#            2> {log}
+#        """
 
-#Creates temp dir, Runs go_fetch.py with temp dir as output, Creates final dir structure, Moves all contents to final location, and Cleans up temporary directory.
+
+
+#NEW VERSION OF RULE - Creates temp dir, Runs go_fetch.py with temp dir as output, Creates final dir structure,
+#Moves all contents to final location, and Cleans up temporary directory.
 rule fetch_organelle_sequences:
     output:
         # Using direct config values instead of wildcards
@@ -172,7 +234,7 @@ rule fetch_organelle_sequences:
     resources:
         api_requests=1
     shell:
-         """
+        """
         # Error handling function
         handle_error() {{
             error_message="$1"
@@ -232,13 +294,20 @@ rule fetch_organelle_sequences:
                 --overwrite \
                 2> >(tee -a {log} {output.sample_log} >&2) \
                 > >(tee -a {output.sample_log}); then
-                break
-            elif [ $i -eq 3 ]; then
-                handle_error "go_fetch.py failed after 3 attempts"
+                # Check the actual output files exist before declaring success
+                if [ -f "{params.temp_dir}/seed.fasta" ] && [ -f "{params.temp_dir}/gene.fasta" ]; then
+                    break
+                else
+                    echo "Required output files not found despite successful exit" >> {log}
+                    exit 1
+                fi
             else
-                echo "Attempt $i failed, retrying..." >> {log}
-                echo "Attempt $i failed, retrying..." >> {output.sample_log}
-                wait_and_retry
+                if [ $i -eq 3 ]; then
+                    handle_error "go_fetch.py failed after 3 attempts"
+                else
+                    echo "Attempt $i failed, retrying..." >> {log}
+                    wait_and_retry
+                fi
             fi
         done
 
