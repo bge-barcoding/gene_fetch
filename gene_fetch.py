@@ -410,12 +410,172 @@ class EntrezHandler:
         return _do_search(**kwargs)
 
 
+
+
+
 class SequenceProcessor:
-    """Handles sequence processing and validation."""
+    """Handles sequence processing and validation with WGS support."""
+    
     def __init__(self, config: Config, entrez: EntrezHandler):
         self.config = config
         self.entrez = entrez
         
+    def parse_contig_line(self, contig_line: str) -> Optional[Tuple[str, int, int]]:
+        """
+        Parse a GenBank CONTIG line to extract WGS contig information.
+        
+        Args:
+            contig_line: The CONTIG line from a GenBank record
+            
+        Returns:
+            Optional[Tuple[str, int, int]]: (contig_id, start, end) if found
+        """
+        try:
+            # Remove 'join(' and ')' if present
+            cleaned = contig_line.strip().replace('join(', '').replace(')', '')
+            
+            # Parse the contig reference
+            # Format is typically: WVEN01000006.2:1..16118
+            if ':' in cleaned:
+                contig_id, coords = cleaned.split(':')
+                if '..' in coords:
+                    start, end = coords.split('..')
+                    return contig_id, int(start), int(end)
+        except Exception as e:
+            logger.error(f"Error parsing CONTIG line '{contig_line}': {e}")
+        return None
+        
+    def fetch_wgs_sequence(self, record: SeqRecord) -> Optional[SeqRecord]:
+        """
+        Fetch sequence for a WGS record by retrieving the actual contig sequence.
+        
+        Args:
+            record: The WGS record without sequence
+            
+        Returns:
+            Optional[SeqRecord]: Record with sequence if successful
+        """
+        try:
+            # Check for CONTIG line in annotations
+            contig_line = record.annotations.get('contig', None)
+            if not contig_line:
+                logger.warning(f"No CONTIG line found in WGS record {record.id}")
+                return None
+                
+            # Parse the CONTIG line
+            contig_info = self.parse_contig_line(contig_line)
+            if not contig_info:
+                logger.error(f"Could not parse CONTIG line: {contig_line}")
+                return None
+                
+            contig_id, start, end = contig_info
+            logger.info(f"Found WGS contig reference: {contig_id} positions {start}..{end}")
+            
+            # Fetch the actual contig sequence
+            try:
+                handle = self.entrez.fetch(
+                    db="nucleotide",
+                    id=contig_id,
+                    rettype="fasta",
+                    retmode="text"
+                )
+                contig_record = next(SeqIO.parse(handle, "fasta"))
+                handle.close()
+                
+                if not contig_record or not contig_record.seq:
+                    logger.error(f"Failed to fetch sequence for contig {contig_id}")
+                    return None
+                    
+                # Extract the relevant portion
+                start_idx = start - 1  # Convert to 0-based indexing
+                sequence = contig_record.seq[start_idx:end]
+                
+                if not sequence:
+                    logger.error(f"Extracted sequence is empty for positions {start}..{end}")
+                    return None
+                    
+                # Create new record with the sequence
+                new_record = record[:]
+                new_record.seq = sequence
+                logger.info(f"Successfully extracted {len(sequence)} bp from WGS contig")
+                
+                return new_record
+                
+            except Exception as e:
+                logger.error(f"Error fetching WGS contig {contig_id}: {e}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error processing WGS record: {e}")
+            return None
+
+    def fetch_nucleotide_record(self, record_id: str) -> Optional[SeqRecord]:
+        """
+        Enhanced nucleotide sequence fetching with WGS support.
+        
+        Args:
+            record_id: GenBank/RefSeq accession number
+            
+        Returns:
+            Optional[SeqRecord]: Sequence record if successful
+        """
+        try:
+            # First attempt to fetch the record
+            handle = self.entrez.fetch(db="nucleotide", id=record_id, rettype="gb", retmode="text")
+            record = next(SeqIO.parse(handle, "genbank"))
+            handle.close()
+            
+            # Check if it's a WGS record
+            is_wgs = False
+            if hasattr(record, 'annotations'):
+                keywords = record.annotations.get('keywords', [])
+                is_wgs = 'WGS' in keywords
+                
+            if is_wgs:
+                logger.info(f"WGS record detected for {record_id}")
+                
+                # Try to fetch using CONTIG information first
+                wgs_record = self.fetch_wgs_sequence(record)
+                if wgs_record and wgs_record.seq:
+                    return wgs_record
+                    
+                # If that fails, try alternative methods...
+                logger.warning("Failed to fetch using CONTIG information, trying alternatives...")
+                
+                # Try direct FASTA fetch
+                try:
+                    fasta_handle = self.entrez.fetch(
+                        db="nucleotide",
+                        id=record_id,
+                        rettype="fasta",
+                        retmode="text"
+                    )
+                    fasta_record = next(SeqIO.parse(fasta_handle, "fasta"))
+                    fasta_handle.close()
+                    
+                    if fasta_record and fasta_record.seq:
+                        logger.info(f"Successfully fetched sequence using FASTA format")
+                        return fasta_record
+                        
+                except Exception as e:
+                    logger.error(f"Failed to fetch FASTA format: {e}")
+            
+            # For non-WGS records or if WGS handling failed, verify sequence content
+            if record.seq is not None and len(record.seq) > 0:
+                try:
+                    # Verify we can access the sequence
+                    _ = str(record.seq)
+                    return record
+                except Bio.Seq.UndefinedSequenceError:
+                    logger.error(f"Undefined sequence content for {record_id}")
+                    return None
+                    
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error fetching nucleotide sequence for {record_id}: {e}")
+            return None
+
     def extract_cds(self, record: SeqRecord, gene_name: str) -> Optional[SeqRecord]:
         """
         Extract CDS region from a sequence record.
@@ -425,7 +585,7 @@ class SequenceProcessor:
             gene_name: Name of the gene to find
             
         Returns:
-            Optional[SeqRecord]: Extracted CDS record if found and valid, None otherwise
+            Optional[SeqRecord]: Extracted CDS record if found and valid
         """
         logger.info(f"Attempting to extract CDS for gene {gene_name}")
         gene_variations = set()
@@ -435,7 +595,7 @@ class SequenceProcessor:
             gene_variations = {v.split('[')[0].strip('"') for v in variations}
         else:
             logger.warning(f"No defined variations for gene {gene_name}")
-            gene_variations = {gene_name.lower()}  # Use just the gene name if no variations defined
+            gene_variations = {gene_name.lower()}
         
         for feature in record.features:
             if feature.type != "CDS":
@@ -607,33 +767,24 @@ class SequenceProcessor:
                     first_accession = segments[0][0]
                     logger.info(f"Fetching nucleotide sequence for accession: {first_accession}")
                     
-                    handle = self.entrez.fetch(db="nucleotide", id=first_accession, rettype="gb", retmode="text")
-                    if not handle:
+                    # Use enhanced nucleotide fetching with WGS support
+                    nucleotide_record = self.fetch_nucleotide_record(first_accession)
+                    if not nucleotide_record:
                         logger.error(f"Failed to fetch nucleotide sequence for accession: {first_accession}")
                         return None
-                    
-                    nucleotide_record = next(SeqIO.parse(handle, "genbank"))
-                    handle.close()
                     
                     # Extract and join all segments
                     complete_sequence = ""
                     for accession, coordinates in segments:
                         if accession != first_accession:
-                            handle = self.entrez.fetch(db="nucleotide", id=accession, rettype="gb", retmode="text")
-                            if not handle:
+                            nucleotide_record = self.fetch_nucleotide_record(accession)
+                            if not nucleotide_record:
                                 logger.error(f"Failed to fetch additional sequence: {accession}")
                                 continue
-                            nucleotide_record = next(SeqIO.parse(handle, "genbank"))
-                            handle.close()
                         
                         if coordinates:
                             start, end = coordinates
-                            logger.debug(f"Sequence length before extraction: {len(nucleotide_record.seq)}")
-                            logger.debug(f"Using array indices [{start-1}:{end}] for slicing")
-                            # Fix: Ensure we use the full end coordinate 
                             segment_seq = str(nucleotide_record.seq[start-1:end])
-                            logger.debug(f"Extracted sequence length: {len(segment_seq)}")
-                            logger.debug(f"Expected length from coordinates: {end - (start-1)}")
                             if len(segment_seq) == 0:
                                 logger.error(f"Zero-length sequence extracted using coordinates {start}..{end}")
                                 return None
@@ -649,7 +800,7 @@ class SequenceProcessor:
                     # Create new record with complete sequence
                     new_record = nucleotide_record[:]
                     new_record.seq = Seq(complete_sequence)
-                    logger.info(f"Successfully extracted nucleotide sequence of length {len(complete_sequence)} (Accession: {first_accession})")
+                    logger.info(f"Successfully extracted nucleotide sequence of length {len(complete_sequence)}")
                     
                     return new_record
                     
@@ -768,172 +919,133 @@ class SequenceProcessor:
                          nucleotide_record: Optional[SeqRecord],
                          best_taxonomy: List[str],
                          best_matched_rank: Optional[str]) -> Tuple[bool, bool, List[str], Optional[str], Optional[SeqRecord], Optional[SeqRecord]]:
-       """
-       Helper function to attempt sequence fetch at a specific taxonomic level.
-       Now fetches sequences sorted by length for efficiency.
-       """
-       protein_found = False
-       nucleotide_found = False
+        """
+        Helper function to attempt sequence fetch at a specific taxonomic level.
+        For --type both, ensures nucleotide sequence corresponds to protein sequence.
+        """
+        protein_found = False
+        nucleotide_found = False
 
-       try:
-           # Try protein first if doing 'protein' or 'both'
-           if sequence_type in ['protein', 'both'] and not protein_record:
-               protein_search = (f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp] "
-                              f"AND {self.config.protein_length_threshold}:10000[SLEN]")
-               logger.info(f"Searching protein database at rank {rank_name} ({taxon_name}) with term: {protein_search}")
-               
-               try:
-                   protein_results = self.entrez.search(db="protein", term=protein_search)
-                   if not protein_results or not protein_results.get("IdList"):
-                       logger.info(f"No protein sequences found at {rank_name} rank")
-                   else:
-                       id_list = protein_results.get("IdList")
-                       logger.info(f"Found {len(id_list)} protein IDs: {id_list}")
-                       
-                       # Find longest protein sequence
-                       longest_protein = None
-                       max_length = 0
-                       
-                       for protein_id in id_list:
-                           handle = self.entrez.fetch(db="protein", id=protein_id,
-                                                    rettype="gb", retmode="text")
-                           if handle:
-                               temp_record = next(SeqIO.parse(handle, "genbank"))
-                               handle.close()
+        try:
+            # Handle protein search for 'protein' or 'both' types
+            if sequence_type in ['protein', 'both'] and not protein_record:
+                protein_search = (f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp] "
+                               f"AND {self.config.protein_length_threshold}:10000[SLEN]")
+                logger.info(f"Searching protein database at rank {rank_name} ({taxon_name}) with term: {protein_search}")
+                
+                try:
+                    protein_results = self.entrez.search(db="protein", term=protein_search)
+                    if protein_results and protein_results.get("IdList"):
+                        id_list = protein_results.get("IdList")
+                        logger.info(f"Found {len(id_list)} protein IDs: {id_list}")
+                        
+                        # Find longest protein sequence
+                        longest_protein = None
+                        max_length = 0
+                        
+                        for protein_id in id_list:
+                            handle = self.entrez.fetch(db="protein", id=protein_id,
+                                                     rettype="gb", retmode="text")
+                            if handle:
+                                temp_record = next(SeqIO.parse(handle, "genbank"))
+                                handle.close()
 
-                               # Skip problematic UniProt/Swiss-Prot protein accession numbers
-                               if re.match(r'^[A-Z]\d+', temp_record.id) and not re.match(r'^[A-Z]{2,}', temp_record.id):
-                                   logger.info(f"Skipping UniProtKB/Swiss-Prot protein record {temp_record.id}")
-                                   continue
-                               
-                               seq_length = len(temp_record.seq)
-                               if seq_length > max_length:
-                                   max_length = seq_length
-                                   longest_protein = temp_record
-                                   logger.info(f"Fetched longest protein sequence: {seq_length} aa (Accession: {temp_record.id})")
-                       
-                       if longest_protein:
-                           protein_record = longest_protein
-                           best_taxonomy = protein_record.annotations.get("taxonomy", [])
-                           protein_found = True
-               except Exception as e:
-                   logger.error(f"Error searching protein database: {e}")
-                   protein_results = None
+                                # Skip problematic UniProt/Swiss-Prot protein accession numbers
+                                if re.match(r'^[A-Z]\d+', temp_record.id) and not re.match(r'^[A-Z]{2,}', temp_record.id):
+                                    logger.info(f"Skipping UniProtKB/Swiss-Prot protein record {temp_record.id}")
+                                    continue
+                                
+                                seq_length = len(temp_record.seq)
+                                if seq_length > max_length:
+                                    max_length = seq_length
+                                    longest_protein = temp_record
+                                    logger.info(f"Fetched longest protein sequence: {seq_length} aa (Accession: {temp_record.id})")
+                        
+                        if longest_protein:
+                            protein_record = longest_protein
+                            best_taxonomy = protein_record.annotations.get("taxonomy", [])
+                            protein_found = True
+                            
+                            # For --type both, immediately try to fetch corresponding nucleotide
+                            if sequence_type == 'both':
+                                nucleotide_record = self.fetch_nucleotide_from_protein(protein_record, gene_name)
+                                if nucleotide_record:
+                                    nucleotide_found = True
+                                    logger.info(f"Successfully fetched corresponding nucleotide sequence of length {len(nucleotide_record.seq)}")
+                                else:
+                                    logger.warning("Failed to fetch corresponding nucleotide sequence from protein record")
+                                    # Reset protein record since we need both for 'both' type
+                                    protein_record = None
+                                    protein_found = False
+                                    
+                except Exception as e:
+                    logger.error(f"Error searching protein database: {e}")
 
-           # For nucleotide, prioritise getting it from protein if we're doing 'both'
-           if sequence_type in ['nucleotide', 'both'] and not nucleotide_record:
-               if sequence_type == 'both':
-                   if protein_record:
-                       nucleotide_record = self.fetch_nucleotide_from_protein(protein_record, gene_name)
-                       if nucleotide_record:
-                           nucleotide_found = True
-                   else:
-                       # Skip nucleotide search until we try finding protein at all ranks
-                       return protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_record, nucleotide_record
-               else:
-                   # Direct nucleotide search with pre-sorting by length
-                   nucleotide_search = (f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp] "
-                                      f"AND {self.config.nucleotide_length_threshold}:30000[SLEN]")
-                   logger.info(f"Searching nucleotide database at rank {rank_name} ({taxon_name}) with term: {nucleotide_search}")
-                   
-                   nucleotide_results = self.entrez.search(db="nucleotide", term=nucleotide_search)
-                   
-                   if nucleotide_results and nucleotide_results.get("IdList"):
-                       id_list = nucleotide_results.get("IdList")
-                       logger.info(f"Found {len(id_list)} nucleotide sequence IDs: {id_list}")
-                       
-                       # First, get sequence lengths using esummary
-                       sequence_lengths = []
-                       chunk_size = 50  # Process in chunks to avoid too many simultaneous requests
-                       
-                       for i in range(0, len(id_list), chunk_size):
-                           chunk = id_list[i:i + chunk_size]
-                           try:
-                               summary_handle = Entrez.esummary(db="nucleotide", id=",".join(chunk))
-                               summaries = Entrez.read(summary_handle)
-                               summary_handle.close()
-                               
-                               for summary in summaries:
-                                   seq_id = summary['Id']
-                                   length = int(summary.get('Length', 0))
-                                   sequence_lengths.append((seq_id, length))
-                                   
-                           except Exception as e:
-                               logger.error(f"Error fetching summary for chunk: {e}")
-                               continue
-                       
-                       # Sort sequences by length in descending order
-                       sequence_lengths.sort(key=lambda x: x[1], reverse=True)
-                       logger.info("Sorted sequences by length, processing from longest to shortest")
-                       
-                       # Process sequences in order of length
-                       longest_sequence = None
-                       max_length = 0
-                       best_temp_taxonomy = []
+            # Handle nucleotide-only search (skip if --type both as that's handled above)
+            elif sequence_type == 'nucleotide' and not nucleotide_record:
+                nucleotide_search = (f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp] "
+                                   f"AND {self.config.nucleotide_length_threshold}:30000[SLEN]")
+                logger.info(f"Searching nucleotide database at rank {rank_name} ({taxon_name}) with term: {nucleotide_search}")
+                
+                nucleotide_results = self.entrez.search(db="nucleotide", term=nucleotide_search)
+                
+                if nucleotide_results and nucleotide_results.get("IdList"):
+                    id_list = nucleotide_results.get("IdList")
+                    logger.info(f"Found {len(id_list)} nucleotide sequence IDs: {id_list}")
+                    
+                    longest_sequence = None
+                    max_length = 0
+                    best_temp_taxonomy = []
 
-                       for seq_id, total_length in sequence_lengths:
-                           try:
-                               handle = self.entrez.fetch(db="nucleotide", id=seq_id,
-                                                        rettype="gb", retmode="text")
-                               if handle:
-                                   temp_record = next(SeqIO.parse(handle, "genbank"))
-                                   handle.close()
-                                   
-                                   # For rRNA genes, use full sequence
-                                   if gene_name not in self.config._protein_coding_genes:
-                                       seq_length = len(temp_record.seq)
-                                       if seq_length > max_length:
-                                           max_length = seq_length
-                                           longest_sequence = temp_record
-                                           best_temp_taxonomy = temp_record.annotations.get("taxonomy", [])
-                                           logger.info(f"Found longer nucleotide sequence: {seq_length} bp (Accession: {temp_record.id})")
-                                   else:
-                                       # For protein-coding genes, check CDS length
-                                       if gene_name in self.config._protein_coding_genes:
-                                           # Only attempt CDS extraction for first sequence
-                                           # or if we don't have any CDS yet
-                                           if max_length == 0:  # First sequence or no CDS found yet
-                                               cds_record = self.extract_cds(temp_record, gene_name)
-                                               if cds_record:
-                                                   seq_length = len(cds_record.seq)
-                                                   max_length = seq_length
-                                                   longest_sequence = cds_record
-                                                   best_temp_taxonomy = temp_record.annotations.get("taxonomy", [])
-                                                   logger.info(f"Found longer CDS sequence: {seq_length} bp (Accession: {temp_record.id})")
-                                           else:
-                                               # For subsequent sequences, check total length first
-                                               if total_length <= max_length:
-                                                   logger.info(f"Total sequence length ({total_length} bp) is not longer than current best CDS ({max_length} bp), skipping remaining sequences")
-                                                   break
+                    for seq_id in id_list:
+                        try:
+                            temp_record = self.fetch_nucleotide_record(seq_id)
+                            
+                            if temp_record:
+                                # For rRNA genes, use full sequence
+                                if gene_name not in self.config._protein_coding_genes:
+                                    seq_length = len(temp_record.seq)
+                                    if seq_length > max_length:
+                                        max_length = seq_length
+                                        longest_sequence = temp_record
+                                        best_temp_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                        logger.info(f"Found longer nucleotide sequence: {seq_length} bp")
+                                else:
+                                    # For protein-coding genes, extract CDS
+                                    if max_length == 0:  # First sequence or no CDS found yet
+                                        cds_record = self.extract_cds(temp_record, gene_name)
+                                        if cds_record:
+                                            seq_length = len(cds_record.seq)
+                                            max_length = seq_length
+                                            longest_sequence = cds_record
+                                            best_temp_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                            logger.info(f"Found longer CDS sequence: {seq_length} bp")
 
-                           except Exception as e:
-                               logger.error(f"Error processing sequence {seq_id}: {e}")
-                               continue
+                        except Exception as e:
+                            logger.error(f"Error processing sequence {seq_id}: {e}")
+                            continue
 
-                       # Use the longest sequence found
-                       if longest_sequence:
-                           nucleotide_record = longest_sequence
-                           if not best_taxonomy:
-                               best_taxonomy = best_temp_taxonomy
-                           nucleotide_found = True
-                           logger.info(f"Selected longest nucleotide sequence of length {len(nucleotide_record.seq)} (Accession: {nucleotide_record.id})")
-                   else:
-                       logger.info(f"No nucleotide sequences found at {rank_name} rank")
+                    if longest_sequence:
+                        nucleotide_record = longest_sequence
+                        if not best_taxonomy:
+                            best_taxonomy = best_temp_taxonomy
+                        nucleotide_found = True
 
-           if protein_found or nucleotide_found:
-               current_match = f"{rank_name}:{taxon_name}" if rank_name else f"exact match:{taxon_name}"
-               if not best_matched_rank or (rank_name and not best_matched_rank.startswith("exact")):
-                   best_matched_rank = current_match
+            if protein_found or nucleotide_found:
+                current_match = f"{rank_name}:{taxon_name}" if rank_name else f"exact match:{taxon_name}"
+                if not best_matched_rank or (rank_name and not best_matched_rank.startswith("exact")):
+                    best_matched_rank = current_match
 
-       except Exception as e:
-           logger.error(f"Error in try_fetch_at_taxid for taxid {current_taxid}: {e}")
-           logger.error("Full error details:", exc_info=True)
+        except Exception as e:
+            logger.error(f"Error in try_fetch_at_taxid for taxid {current_taxid}: {e}")
+            logger.error("Full error details:", exc_info=True)
 
-       return protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_record, nucleotide_record
+        return protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_record, nucleotide_record
 
     def search_and_fetch_sequences(self, taxid: str, gene_name: str, sequence_type: str) -> Tuple[Optional[SeqRecord], Optional[SeqRecord], List[str], str]:
         """
         Search and fetch sequences for a given taxid, traversing up taxonomy if needed.
+        For --type both, ensures nucleotide sequence corresponds to protein sequence.
         Returns (protein_record, nucleotide_record, taxonomy, matched_rank)
         """      
         protein_record = None
@@ -948,20 +1060,17 @@ class SequenceProcessor:
             return None, None, [], "No taxonomy found"
 
         logger.info(f"Full taxonomy for TaxID {taxid}: {', '.join(taxonomy)}")
-        logger.debug(f"Rank information: {taxon_ranks}")
-        logger.debug(f"TaxID mapping: {taxon_ids}")
 
-        # Get ordered list of ranks to traverse, INCLUDING the species level
+        # Get ordered list of ranks to traverse
         current_taxonomy = taxonomy[:]
         current_taxon = current_taxonomy.pop()  # Start with species
         current_rank = taxon_ranks.get(current_taxon, 'unknown')
-        current_taxid = taxid  # Use original taxid for species level
+        current_taxid = taxid
 
         # Traverse taxonomy from species up
-        while True:  # Changed from while current_taxonomy to allow final level check
+        while True:
             logger.info(f"Attempting search at {current_rank} level: {current_taxon} (taxid: {current_taxid})")
             
-            # Try fetch at current taxonomic level first
             protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_record, nucleotide_record = \
                 self.try_fetch_at_taxid(
                     current_taxid, current_rank, current_taxon,
@@ -970,15 +1079,16 @@ class SequenceProcessor:
                     best_taxonomy, best_matched_rank
                 )
 
-            # Check if we have everything we need
-            have_protein = protein_record is not None or sequence_type not in ['protein', 'both']
-            have_nucleotide = nucleotide_record is not None or sequence_type not in ['nucleotide', 'both']
-            
-            # Stop if we have everything we need
-            if have_protein and have_nucleotide:
+            # Check if we have what we need based on sequence_type
+            if sequence_type == 'both':
+                if protein_record and nucleotide_record:
+                    break
+            elif sequence_type == 'protein' and protein_record:
+                break
+            elif sequence_type == 'nucleotide' and nucleotide_record:
                 break
 
-            # Stop if we've gone too high in taxonomy or no more levels to check
+            # Stop if we've gone too high in taxonomy or no more levels
             if (current_rank in ['class', 'subphylum', 'phylum', 'kingdom', 'superkingdom'] or 
                 current_taxon == 'cellular organisms' or 
                 not current_taxonomy):
@@ -990,18 +1100,22 @@ class SequenceProcessor:
             current_rank = taxon_ranks.get(current_taxon, 'unknown')
             current_taxid = taxon_ids.get(current_taxon)
             if not current_taxid:
-                logger.debug(f"No taxid found for {current_taxon}, continuing to next rank")
                 continue
 
             # Add delay between attempts
-            logger.debug("Adding delay between taxonomy level attempts")
             sleep(uniform(1, 2))
 
         # Set final matched rank
         matched_rank = best_matched_rank if best_matched_rank else "No match"
         
-        if not protein_record and not nucleotide_record:
-            logger.warning("No sequences found after traversing taxonomy")
+        if sequence_type == 'both' and (not protein_record or not nucleotide_record):
+            logger.warning("Failed to find both protein and corresponding nucleotide sequence")
+            return None, None, [], "No match"
+        elif sequence_type == 'protein' and not protein_record:
+            logger.warning("No protein sequence found")
+            return None, None, [], "No match"
+        elif sequence_type == 'nucleotide' and not nucleotide_record:
+            logger.warning("No nucleotide sequence found")
             return None, None, [], "No match"
 
         logger.info(f"Search completed. Matched at rank: {matched_rank}")
