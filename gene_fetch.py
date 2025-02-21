@@ -97,13 +97,13 @@ def log_progress(current: int, total: int, interval: int = 100) -> None:
 def setup_argument_parser():
     parser = argparse.ArgumentParser(description='Fetch gene sequences from NCBI databases.')
     
-    parser.add_argument('gene_name',
+    parser.add_argument('-g', '--gene', required=True,
                       help='Name of gene to search for in NCBI RefSeq database (e.g., cox1)')
     
-    parser.add_argument('output_directory',
+    parser.add_argument('-o', '--out', required=True,
                       help='Path to directory to save output files')
     
-    parser.add_argument('samples_csv',
+    parser.add_argument('-i', '--in', required=True, dest='input_csv',
                       help='Path to input CSV file containing TaxIDs')
     
     parser.add_argument('--type', required=True, choices=['protein', 'nucleotide', 'both'],
@@ -116,7 +116,6 @@ def setup_argument_parser():
                       help='Minimum nucleotide sequence length (default: 1500)')
     
     return parser
-
 
 
 @dataclass
@@ -1260,13 +1259,12 @@ def process_sample(process_id: str, taxid: str, sequence_type: str,
 
 
 def main():
-    """Main function to coordinate the script execution."""
     parser = setup_argument_parser()
     args = parser.parse_args()
 
-    gene_name = args.gene_name.lower()
-    output_dir = Path(args.output_directory)
-    samples_csv = Path(args.samples_csv)
+    gene_name = args.gene.lower()
+    output_dir = Path(args.out)
+    samples_csv = Path(args.input_csv)
     sequence_type = args.type.lower()
 
     # Initialize components
