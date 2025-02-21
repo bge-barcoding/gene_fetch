@@ -11,10 +11,10 @@ A Python tool for retrieving protein and/or gene sequences from NCBI databases. 
 
 ## Usage
 ```bash
-python 1_gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequence_type>
-  <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/16s/rbcl).
-  <output_directory>: Path to directory to save output files. The directory will be created if it does not exist.
-  <samples.csv>: Path to input CSV file containing Process IDs (ID column) and TaxIDs (taxid column).
+python 1_gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> -i/--in <samples.csv> --type <sequence_type>
+  --gene <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/16s/rbcl).
+  --out <output_directory>: Path to directory to save output files. The directory will be created if it does not exist.
+  --in <samples.csv>: Path to input CSV file containing Process IDs (ID column) and TaxIDs (taxid column).
   --type: Sequence type to fetch ('protein', 'nucleotide', or 'both')
   --protein_size: Minimum protein sequence length (default: 500). Optional.
   --nucleotide_size: Minimum nucleotide sequence length (default: 1500). Optional.
