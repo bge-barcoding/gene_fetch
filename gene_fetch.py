@@ -36,8 +36,8 @@ Dependencies:
 - Standard library: csv, sys, os, time, logging, functools.lru_cache
 
 Usage:
-    python gene_fetch.py <gene_name> <output_directory> <samples.csv> --type <sequence_type>
-                        [--protein_size <min_size>] [--nucleotide_size <min_size>]
+    python gene_fetch.py -g/--gene <gene_name> -o/--output <output_directory> -i/--input <samples.csv> --type <sequence_type>
+                        [--protein_size <min_size>] [--nucleotide_size <min_size>] [-s--single <taxid>]
 
 Example:
     python gene_fetch.py cox1 ./output_dir samples.csv --type both --protein_size 500 --nucleotide_size 1500
