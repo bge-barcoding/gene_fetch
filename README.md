@@ -17,7 +17,7 @@ This script fetches gene sequences from NCBI databases based on taxonomy IDs (ta
 
 ## Usage
 ```bash
-python 1_gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> -i/--in <samples.csv> --type <sequence_type>
+python gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> -i/--in <samples.csv> --type <sequence_type>
                         [--protein_size <min_size>] [--nucleotide_size <min_size>] [-s/--single <taxid>]
   -g/--gene <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/16s/rbcl).
   -o/--out <output_directory>: Path to directory to save output files. The directory will be created if it does not exist.
@@ -45,23 +45,43 @@ conda env create -f fetch.yaml
 - See 1_gene_fetch.sh (for running via Slurm).
 
 ## Output Structure
+### 'Normal' mode
 ```
 output_dir/
-├── nucleotide/             # Only populated if '--type nucleotide/both' utilised.
+├── nucleotide/             # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
 │   ├── SAMPLE1_dna.fasta   
 │   ├── SAMPLE2_dna.fasta
 │   └── ...
-├── SAMPLE1.fasta           # Protein sequences
+├── SAMPLE1.fasta           # Protein sequences.
 ├── SAMPLE2.fasta
-├── sequence_references.csv # Sequence metadata (for input into MGE snakemake pipeline)
-├── failed_searches.csv     # Failed search attempts (ideally empty)
-└── gene_fetch.log          # Operation log
+├── sequence_references.csv # Sequence metadata.
+├── failed_searches.csv     # Failed search attempts.
+└── gene_fetch.log          # Operation log.
 ```
+### 'Single-taxid' mode
+```
+output_dir/
+├── nucleotide/                      # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
+│   ├── ACCESSION1_dna.fasta   
+│   ├── ACCESSION2_dna.fasta
+│   └── ...
+├── ACCESSION1.fasta                 # Protein sequences.
+├── ACCESSION2.fasta
+├── fetched_nucleotide_sequences.csv # Only populated if '--type nucleotide/both' utilised. Sequence metadata.
+├── fetched_protein_sequences.csv    # Only populated if '--type protein/both' utilised. Sequence metadata.
+├── failed_searches.csv              # Failed search attempts (ideally empty)
+└── gene_fetch.log                   # Operation log
+```
+
 ### sequence_references.csv output example
 | ID | taxid | protein_accession | protein_length | nucleotide_accession | nucleotide_length | matched_rank | ncbi_taxonomy | reference_name | protein_reference_path | nucleotide_reference_path |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | BSNHM002-24 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus: Apatania | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | abs/path/to/protein_references/BSNHM002-24_dna.fasta |
 
+### fetched_protein|nucleotide_sequences.csv output example
+| ID | taxid | Description |
+| --- | --- | --- |
+| BSNHM002-24 | 3086 | cytochrome c oxidase subunit I (mitochondrion) [Pectinodesmus pectinatus] |
 
 
 ## Supported targets
