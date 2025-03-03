@@ -19,7 +19,7 @@ Key Features:
 - Robust error handling with automatic retries for NCBI API calls, including exponential backoff
 
 Input:
-- NCBI account email adress and API key (see: https://support.nlm.nih.gov/kbArticle/?pn=KA-05317)
+- NCBI account email address and API key (see: https://support.nlm.nih.gov/kbArticle/?pn=KA-05317)
 - CSV file containing taxonomy IDs (must have 'taxid' and 'ID' column)
 - Gene name (e.g., 'cox1', '16s', 'rbcl', 'matk')
 - Output directory path (will create new directories)
@@ -40,23 +40,42 @@ Dependencies:
 - ratelimit>=2.2.1
 
 Usage:
-    python gene_fetch.py -g/--gene <gene_name> -o/--output <output_directory> -i/--input <samples.csv> --type <sequence_type>
-                        [--protein_size <min_size>] [--nucleotide_size <min_size>] [-s/--single <taxid>]
+    python gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> --type <sequence_type> 
+                        [-i/--in <samples.csv>] [-s/--single <taxid>] 
+                        [--protein_size <min_size>] [--nucleotide_size <min_size>]
+                        [-e/--email <email>] [-k/--api-key <api_key>]
     
+    # Required arguments:
+    -e/--email             Email to use for NCBI API requests
+    -k/--api-key           API key to use for NCBI API requests
+    -g/--gene              Gene name to search for (e.g., cox1, 16s, rbcl)
+    -o/--out               Directory to save output files
+    --type                 Sequence type to fetch (protein, nucleotide, or both)
+    -i/--in                Input CSV file with taxonomy IDs (required unless using --single)
+
+    # Optional arguments:
+    -s/--single            Single TaxID to fetch all available sequences for
+    --protein_size         Minimum protein sequence length (default: 500)
+    --nucleotide_size      Minimum nucleotide sequence length (default: 1500)
+
+Examples:
     # Single taxid mode for retrieving all available sequences
-    python gene_fetch.py -g <gene_name> -o <output_directory> -s <taxid> --type <sequence_type>
+    python gene_fetch.py -e your.email@domain.com -k your_api_key -g <gene_name> -o <output_directory> -s <taxid> --type <sequence_type>
 
     # Get all available rbcL sequences for a specific plant family (taxid: 3700)
-    python gene_fetch.py -g rbcl -o ./orchid_rbcl --single 3700 --type both
+    python gene_fetch.py -e your.email@domain.com -k your_api_key -g rbcl -o ./orchid_rbcl -s 3700 --type both
 
     # Standard usage retrieving both protein and nucleotide sequences for cox1
-    python gene_fetch.py -g cox1 -o ./output_dir -i ./samples.csv --type both --protein_size 500 --nucleotide_size 1500
+    python gene_fetch.py -e your.email@domain.com -k your_api_key -g cox1 -o ./output_dir -i ./samples.csv --type both --protein_size 500 --nucleotide_size 1500
     
     # Fetch only protein sequences for cytochrome b
-    python gene_fetch.py -g cytb -o ./cytb_proteins -i arthropods.csv --type protein --protein_size 300
+    python gene_fetch.py -e your.email@domain.com -k your_api_key -g cytb -o ./cytb_proteins -i arthropods.csv --type protein --protein_size 300
     
     # Retrieve 16S rRNA nucleotide sequences
-    python gene_fetch.py -g 16s -o ./16s_sequences -i bacteria.csv --type nucleotide --nucleotide_size 1000
+    python gene_fetch.py -e your.email@domain.com -k your_api_key -g 16s -o ./16s_sequences -i bacteria.csv --type nucleotide --nucleotide_size 1000
+    
+    # Using custom email and API key
+    python gene_fetch.py -e your.email@domain.com -k your_api_key -g cox1 -o ./output_dir -i ./samples.csv --type both 
     
 Notes:
 - For protein-coding genes, --type both first fetches protein and then the corresponding nucleotide sequence
@@ -66,7 +85,7 @@ Notes:
 - CDS extraction includes fallback mechanisms for atypical annotation formats
 - When more than 50 matching sequences are found for a sample, the tool employs an efficient two-step process:
   1. Fetches summary information for all matches to determine sequence lengths (using NCBI esummary API)
-  2. Processes only the top 50 longest sequences, significantly reducing full record API calls
+  2. Processes only the top 10 longest sequences, significantly reducing full record API calls
 
 Single Mode Operation:
 - When using `-s/--single` flag with a taxid, the tool switches to exhaustive retrieval mode
@@ -87,7 +106,6 @@ Author: D. Parsons
 Version: 1.0.4
 License: MIT
 """
-
 
 import csv
 import sys
@@ -151,20 +169,25 @@ def setup_argument_parser():
     parser.add_argument('--nucleotide_size', type=int, default=1500,
                       help='Minimum nucleotide sequence length (default: 1500)')
     
-    parser.add_argument('-e', '--email', type=str,
-                      help='Email to use for NCBI API requests')
+    parser.add_argument('-e', '--email', type=str, required=True,
+                      help='Email to use for NCBI API requests (required)')
     
-    parser.add_argument('-k', '--api-key', type=str,
-                      help='API key to use for NCBI API requests')
+    parser.add_argument('-k', '--api-key', type=str, required=True,
+                      help='API key to use for NCBI API requests (required)')
     
     return parser
 
 @dataclass
 class Config:
-        def __init__(self, email=None, api_key=None):
-            # Use provided email and API key if available, otherwise use defaults
-            self.email = email if email else "b.price@nhm.ac.uk"
-            self.api_key = api_key if api_key else "82df5a6f5cf735302d3cf1fcf48b206cfe09"
+        def __init__(self, email, api_key):
+            # Email and API key are now required
+            if not email:
+                raise ValueError("Email address is required for NCBI API requests. Use -e/--email to provide your email.")
+            if not api_key:
+                raise ValueError("API key is required for NCBI API requests. Use -k/--api-key to provide your API key.")
+            
+            self.email = email
+            self.api_key = api_key
 
             # With API key, we can make up to 10 requests per second
             self.max_calls_per_second = 10
@@ -1332,11 +1355,13 @@ class SequenceProcessor:
                             protein_results = self.entrez.search(db="protein", term=protein_search)
                             if protein_results and protein_results.get("IdList"):
                                 id_list = protein_results.get("IdList")
-                                logger.info(f"*****Found {len(id_list)} protein IDs: {id_list}")
+                                logger.info(f"Found {len(id_list)} protein IDs")
+                                if len(id_list) > 5:  # Only log IDs if there are not too many
+                                    logger.debug(f"Protein IDs: {id_list}")
                                 
                                 # For non-fetch_all mode, apply prefiltering if there are many IDs
                                 processed_ids = id_list
-                                if not fetch_all and len(id_list) > 50:
+                                if not fetch_all and len(id_list) > 10:
                                     logger.info(f"Prefiltering {len(id_list)} proteins based on length information")
                                     
                                     # Get summaries and sort by length
@@ -1348,31 +1373,43 @@ class SequenceProcessor:
                                             batch_ids = id_list[i:i+batch_size]
                                             id_string = ','.join(batch_ids)
                                             
-                                            handle = Entrez.esummary(db="protein", id=id_string)
-                                            batch_summaries = Entrez.read(handle)
-                                            handle.close()
-                                            
-                                            # Extract sequence lengths from summaries
-                                            for summary in batch_summaries:
-                                                seq_id = summary.get('Id', '')
-                                                seq_length = int(summary.get('Length', 0))
-                                                sorted_summaries.append((seq_id, seq_length))
-                                            
-                                            # Add delay between batches
-                                            if i + batch_size < len(id_list):
-                                                sleep(uniform(0.5, 1.0))
+                                            logger.debug(f"Fetching summary for batch of {len(batch_ids)} IDs")
+                                            try:
+                                                handle = Entrez.esummary(db="protein", id=id_string)
+                                                batch_summaries = Entrez.read(handle)
+                                                handle.close()
+                                                
+                                                # Extract sequence lengths from summaries
+                                                for summary in batch_summaries:
+                                                    seq_id = summary.get('Id', '')
+                                                    seq_length = int(summary.get('Length', 0))
+                                                    sorted_summaries.append((seq_id, seq_length))
+                                                
+                                                # Add delay between batches
+                                                if i + batch_size < len(id_list):
+                                                    sleep(uniform(0.5, 1.0))
+                                            except Exception as batch_e:
+                                                logger.error(f"Error in batch summary fetch: {batch_e}")
+                                                continue
                                         
-                                        # Sort by length (descending)
-                                        sorted_summaries.sort(key=lambda x: x[1], reverse=True)
-                                        
-                                        # Take only top 50 IDs by sequence length
-                                        processed_ids = [item[0] for item in sorted_summaries[:50]]
-                                        logger.info(f"Filtered to top 50 proteins by length (longest: {sorted_summaries[0][1]} aa)")
+                                        # Check if we got any summaries
+                                        if not sorted_summaries:
+                                            logger.error("Failed to fetch any sequence summaries, using all IDs")
+                                        else:
+                                            # Sort by length (descending)
+                                            sorted_summaries.sort(key=lambda x: x[1], reverse=True)
+                                            
+                                            # Take only top 50 IDs by sequence length
+                                            processed_ids = [item[0] for item in sorted_summaries[:10]]
+                                            logger.info(f"Successfully filtered to top 10 proteins by length (longest: {sorted_summaries[0][1]} aa)")
                                         
                                     except Exception as e:
                                         logger.error(f"Error in prefiltering: {e}")
-                                        # If prefiltering fails, use original ID list
-                                        processed_ids = id_list
+                                        logger.error("Full error details:", exc_info=True)
+                                        logger.warning("Using all IDs without length filtering")
+                                
+                                # Log how many IDs we're processing
+                                logger.info(f"Processing {len(processed_ids)} protein IDs")
                                 
                                 # Process the filtered or complete ID list
                                 for protein_id in processed_ids:
@@ -1447,11 +1484,13 @@ class SequenceProcessor:
                             nucleotide_results = self.entrez.search(db="nucleotide", term=nucleotide_search)
                             if nucleotide_results and nucleotide_results.get("IdList"):
                                 id_list = nucleotide_results.get("IdList")
-                                logger.info(f"*****Found {len(id_list)} nucleotide sequence IDs: {id_list}")
+                                logger.info(f"Found {len(id_list)} nucleotide sequence IDs")
+                                if len(id_list) > 5:  # Only log IDs if there are not too many
+                                    logger.debug(f"Nucleotide IDs: {id_list}")
 
                                 # Apply the same prefiltering optimization for nucleotide sequences
                                 processed_ids = id_list
-                                if not fetch_all and len(id_list) > 50:
+                                if not fetch_all and len(id_list) > 10:
                                     logger.info(f"Prefiltering {len(id_list)} nucleotide sequences based on length information")
                                     
                                     # Get summaries and sort by length
@@ -1463,37 +1502,52 @@ class SequenceProcessor:
                                             batch_ids = id_list[i:i+batch_size]
                                             id_string = ','.join(batch_ids)
                                             
-                                            handle = Entrez.esummary(db="nucleotide", id=id_string)
-                                            batch_summaries = Entrez.read(handle)
-                                            handle.close()
-                                            
-                                            # Extract sequence lengths from summaries
-                                            for summary in batch_summaries:
-                                                seq_id = summary.get('Id', '')
-                                                seq_length = int(summary.get('Length', 0))
-                                                sorted_summaries.append((seq_id, seq_length))
-                                            
-                                            # Add delay between batches
-                                            if i + batch_size < len(id_list):
-                                                sleep(uniform(0.5, 1.0))
+                                            logger.debug(f"Fetching summary for batch of {len(batch_ids)} IDs")
+                                            try:
+                                                handle = Entrez.esummary(db="nucleotide", id=id_string)
+                                                batch_summaries = Entrez.read(handle)
+                                                handle.close()
+                                                
+                                                # Extract sequence lengths from summaries
+                                                for summary in batch_summaries:
+                                                    seq_id = summary.get('Id', '')
+                                                    seq_length = int(summary.get('Length', 0))
+                                                    sorted_summaries.append((seq_id, seq_length))
+                                                
+                                                # Add delay between batches
+                                                if i + batch_size < len(id_list):
+                                                    sleep(uniform(0.5, 1.0))
+                                            except Exception as batch_e:
+                                                logger.error(f"Error in batch summary fetch: {batch_e}")
+                                                continue
                                         
-                                        # Sort by length (descending)
-                                        sorted_summaries.sort(key=lambda x: x[1], reverse=True)
-                                        
-                                        # Take only top 50 IDs by sequence length
-                                        processed_ids = [item[0] for item in sorted_summaries[:50]]
-                                        logger.info(f"Filtered to top 50 nucleotide sequences by length (longest: {sorted_summaries[0][1]} bp)")
+                                        # Check if we got any summaries
+                                        if not sorted_summaries:
+                                            logger.error("Failed to fetch any sequence summaries, using all IDs")
+                                        else:
+                                            # Sort by length (descending)
+                                            sorted_summaries.sort(key=lambda x: x[1], reverse=True)
+                                            
+                                            # Take only top 50 IDs by sequence length
+                                            processed_ids = [item[0] for item in sorted_summaries[:10]]
+                                            logger.info(f"Successfully filtered to top 10 nucleotide sequences by length (longest: {sorted_summaries[0][1]} bp)")
                                         
                                     except Exception as e:
                                         logger.error(f"Error in nucleotide prefiltering: {e}")
-                                        # If prefiltering fails, use original ID list
-                                        processed_ids = id_list
+                                        logger.error("Full error details:", exc_info=True)
+                                        logger.warning("Using all IDs without length filtering")
+                                
+                                # Log how many IDs we're processing
+                                logger.info(f"Processing {len(processed_ids)} nucleotide IDs")
 
                                 for seq_id in processed_ids:
                                     try:
+                                        logger.info(f"Attempting to fetch nucleotide sequence (accession {seq_id})")
                                         temp_record = self.fetch_nucleotide_record(seq_id)
                                         
                                         if temp_record:
+                                            logger.info(f"Successfully fetched nucleotide sequence of length {len(temp_record.seq)} (accession {temp_record.id})")
+                                            
                                             if gene_name not in self.config._protein_coding_genes:
                                                 # For rRNA genes, use full sequence
                                                 if fetch_all:
@@ -1510,8 +1564,10 @@ class SequenceProcessor:
                                                         best_taxonomy = temp_record.annotations.get("taxonomy", [])
                                             else:
                                                 # For protein-coding genes, extract CDS
+                                                logger.info(f"Attempting to extract CDS from nucleotide sequence (accession {temp_record.id})")
                                                 cds_record = self.extract_nucleotide(temp_record, gene_name, fetch_all)
                                                 if cds_record:
+                                                    logger.info(f"Successfully extracted CDS of length {len(cds_record.seq)} (accession {temp_record.id})")
                                                     if fetch_all:
                                                         nucleotide_records.append(cds_record)
                                                         nucleotide_found = True
@@ -1524,6 +1580,8 @@ class SequenceProcessor:
                                                             nucleotide_records.append(cds_record)
                                                             nucleotide_found = True
                                                             best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                                else:
+                                                    logger.warning(f"Failed to extract CDS from nucleotide sequence (accession {temp_record.id})")
 
                                     except Exception as e:
                                         logger.error(f"Error processing sequence {seq_id}: {e}")
@@ -1544,7 +1602,7 @@ class SequenceProcessor:
                 return protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_records, nucleotide_records
 
     def search_and_fetch_sequences(self, taxid: str, gene_name: str, sequence_type: str, fetch_all: bool = False) -> Tuple[List[SeqRecord], List[SeqRecord], List[str], str]:  
-        # Initialize empty lists for records
+        # Initialise empty lists for records
         protein_records = []
         nucleotide_records = []
         best_taxonomy = []
@@ -1878,103 +1936,108 @@ def main():
     ensure_directory(output_dir)
     logger = setup_logging(output_dir) 
 
-    # Initialise components with single mode flag and pass email/api_key
-    config = Config(email=args.email, api_key=args.api_key)
-    if args.single:
-        # Set very low thresholds when in single mode (effectively no threshold)
-        config.protein_length_threshold = 0
-        config.nucleotide_length_threshold = 0
-        logger.info("Single mode activated: sequence length thresholds disabled")
-    else:
-        config.update_thresholds(args.protein_size, args.nucleotide_size)
-        
-    search_type = config.set_gene_search_term(gene_name)
-
-    if sequence_type not in config.valid_sequence_types:
-        print(f"Invalid sequence type. Choose from: {', '.join(config.valid_sequence_types)}")
-        sys.exit(1)
-    
-    logger.info(f"Using {search_type} search terms for {gene_name}")
-    logger.info(f"Output directory: {output_dir}")
-    logger.info(f"Sequence type: {sequence_type}")
-
-    # Initialize remaining components
-    entrez = EntrezHandler(config)
-    processor = SequenceProcessor(config, entrez)
-
-    # Check if we're in single taxid mode
-    if args.single:
-        logger.info(f"Single taxid mode activated for taxid: {args.single}")
-        process_single_taxid(
-            taxid=args.single,
-            gene_name=gene_name,
-            sequence_type=sequence_type,
-            processor=processor,
-            output_dir=output_dir
-        )
-        logger.info("Single taxid processing completed")
-        sys.exit(0)
-
-    # Regular CSV processing mode
-    if not args.input_csv:
-        logger.error("Input CSV file is required when not using --single mode")
-        sys.exit(1)
-
-    samples_csv = Path(args.input_csv)
-    output_manager = OutputManager(output_dir)
-
-    logger.info(f"Starting gene fetch for {gene_name}")
-    logger.info(f"Samples file: {samples_csv}")
-
+    # Initialize components with required email/api_key
     try:
-        with open(samples_csv, newline='', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            process_id_col = get_process_id_column(reader.fieldnames)
+        config = Config(email=args.email, api_key=args.api_key)
+        if args.single:
+            # Set very low thresholds when in single mode (effectively no threshold)
+            config.protein_length_threshold = 0
+            config.nucleotide_length_threshold = 0
+            logger.info("Single mode activated: sequence length thresholds disabled")
+        else:
+            config.update_thresholds(args.protein_size, args.nucleotide_size)
+            
+        search_type = config.set_gene_search_term(gene_name)
+
+        if sequence_type not in config.valid_sequence_types:
+            print(f"Invalid sequence type. Choose from: {', '.join(config.valid_sequence_types)}")
+            sys.exit(1)
         
-            if not process_id_col:
-                logger.error("Could not find process ID column in input CSV.")
-                sys.exit(1)
+        logger.info(f"Using {search_type} search terms for {gene_name}")
+        logger.info(f"Output directory: {output_dir}")
+        logger.info(f"Sequence type: {sequence_type}")
 
-            # Count total samples
-            total_samples = sum(1 for _ in reader)
-            f.seek(0)
-            next(reader)  # Skip header
+        # Initialize remaining components
+        entrez = EntrezHandler(config)
+        processor = SequenceProcessor(config, entrez)
 
-            # Initialize progress tracking
-            log_progress(0, total_samples)
+        # Check if we're in single taxid mode
+        if args.single:
+            logger.info(f"Single taxid mode activated for taxid: {args.single}")
+            process_single_taxid(
+                taxid=args.single,
+                gene_name=gene_name,
+                sequence_type=sequence_type,
+                processor=processor,
+                output_dir=output_dir
+            )
+            logger.info("Single taxid processing completed")
+            sys.exit(0)
 
-            # Process each sample
-            for i, row in enumerate(reader, 1):
-                try:
-                    taxid = row['taxid'].strip()
-                    process_id = row[process_id_col].strip()
-                    
-                    logger.info(f"====== Processing sample {i}/{total_samples}: {process_id} (TaxID: {taxid}) ======")
-                    
-                    process_sample(
-                        process_id=process_id,
-                        taxid=taxid,
-                        sequence_type=sequence_type,
-                        processor=processor,
-                        output_manager=output_manager,
-                        gene_name=gene_name
-                    )
-                    
-                    # Log progress
-                    log_progress(i, total_samples)
-                    
-                    # Add a small delay between samples
-                    sleep(uniform(0.5, 1.0))
-                    
-                except Exception as e:
-                    logger.error(f"Error processing row {i}: {e}")
-                    continue
+        # Regular CSV processing mode
+        if not args.input_csv:
+            logger.error("Input CSV file is required when not using --single mode")
+            sys.exit(1)
 
-            # Log final progress
-            log_progress(total_samples, total_samples)
+        samples_csv = Path(args.input_csv)
+        output_manager = OutputManager(output_dir)
 
-    except Exception as e:
-        logger.error(f"Fatal error: {e}")
+        logger.info(f"Starting gene fetch for {gene_name}")
+        logger.info(f"Samples file: {samples_csv}")
+
+        try:
+            with open(samples_csv, newline='', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                process_id_col = get_process_id_column(reader.fieldnames)
+            
+                if not process_id_col:
+                    logger.error("Could not find process ID column in input CSV.")
+                    sys.exit(1)
+
+                # Count total samples
+                total_samples = sum(1 for _ in reader)
+                f.seek(0)
+                next(reader)  # Skip header
+
+                # Initialize progress tracking
+                log_progress(0, total_samples)
+
+                # Process each sample
+                for i, row in enumerate(reader, 1):
+                    try:
+                        taxid = row['taxid'].strip()
+                        process_id = row[process_id_col].strip()
+                        
+                        logger.info(f"====== Processing sample {i}/{total_samples}: {process_id} (TaxID: {taxid}) ======")
+                        
+                        process_sample(
+                            process_id=process_id,
+                            taxid=taxid,
+                            sequence_type=sequence_type,
+                            processor=processor,
+                            output_manager=output_manager,
+                            gene_name=gene_name
+                        )
+                        
+                        # Log progress
+                        log_progress(i, total_samples)
+                        
+                        # Add a small delay between samples
+                        sleep(uniform(0.5, 1.0))
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing row {i}: {e}")
+                        continue
+
+                # Log final progress
+                log_progress(total_samples, total_samples)
+
+        except Exception as e:
+            logger.error(f"Fatal error: {e}")
+            sys.exit(1)
+
+    except ValueError as e:
+        logger.error(str(e))
         sys.exit(1)
 
     logger.info("Gene fetch completed successfully")
