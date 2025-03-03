@@ -13,24 +13,33 @@ This script fetches gene sequences from NCBI databases based on taxonomy IDs (ta
 - Robust error handling, logging, and NCBI API rate limiting to comply with guidelines (10 requests/second. Requires valid NCBI API key and email for optimal performance).
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both).
 - Single-taxid mode (-s/--single) for retrieving all available sequences for a specific taxon (-i not required)
-
+- 'Checkpointing' available: If a sample fails during a run, the script can be rerun using the same arguments, and it will skip IDs with entries already in the sequence_references.csv and with .fasta files already present in the output directory.
 
 ## Usage
 ```bash
 python gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> -i/--in <samples.csv> --type <sequence_type>
                         [--protein_size <min_size>] [--nucleotide_size <min_size>] [-s/--single <taxid>]
+
+Required:
+  -e/--email <email_address>: Email address used for NCBI account
+  -k/--api-key <key>: API key to use for NCBI API requests
   -g/--gene <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/16s/rbcl).
   -o/--out <output_directory>: Path to directory to save output files. The directory will be created if it does not exist.
   -i/--in <samples.csv>: Path to input CSV file containing Process IDs (ID column) and TaxIDs (taxid column).
   --type: Sequence type to fetch ('protein', 'nucleotide', or 'both')
-  Optional: --protein_size: Minimum protein sequence length (default: 500).
-  Optional: --nucleotide_size: Minimum nucleotide sequence length (default: 1500).
-  Optional: -s/--single <taxid>: Taxonomic ID for sequence search (-i/--input ignored when -s mode is run(.
+
+Optional
+--protein_size: Minimum protein sequence length (default: 500).
+--nucleotide_size: Minimum nucleotide sequence length (default: 1500).
+-s/--single <taxid>: Taxonomic ID for sequence search (-i/--input ignored when -s mode is run).
 ```
-- 'Checkpointing' available: If a sample fails during a run, the script can be rerun using the same arguments, and it will skip IDs with entries already in the sequence_references.csv and with .fasta files already present in the output directory.
 - ./snakemakeSFU/workflow/envs/fetch.yaml contains all necessary dependencies to run the script. Can create conda env using commmand below (once conda is installed on your system).
 ```
 conda env create -f fetch.yaml
+#contains following dependencies:
+#Python>=3.9
+#biopython>=1.84
+#ratelimit>=2.2.1
 ```
 
 
@@ -58,6 +67,13 @@ output_dir/
 ├── failed_searches.csv     # Failed search attempts.
 └── gene_fetch.log          # Operation log.
 ```
+
+**sequence_references.csv output example**
+| ID | taxid | protein_accession | protein_length | nucleotide_accession | nucleotide_length | matched_rank | ncbi_taxonomy | reference_name | protein_reference_path | nucleotide_reference_path |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| BSNHM002-24 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus: Apatania | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | abs/path/to/protein_references/BSNHM002-24_dna.fasta |
+
+
 ### 'Single-taxid' mode
 ```
 output_dir/
@@ -73,12 +89,7 @@ output_dir/
 └── gene_fetch.log                   # Operation log
 ```
 
-### sequence_references.csv output example
-| ID | taxid | protein_accession | protein_length | nucleotide_accession | nucleotide_length | matched_rank | ncbi_taxonomy | reference_name | protein_reference_path | nucleotide_reference_path |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| BSNHM002-24 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus: Apatania | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | abs/path/to/protein_references/BSNHM002-24_dna.fasta |
-
-### fetched_protein|nucleotide_sequences.csv output example
+**fetched_protein|nucleotide_sequences.csv output example**
 | ID | taxid | Description |
 | --- | --- | --- |
 | BSNHM002-24 | 3086 | cytochrome c oxidase subunit I (mitochondrion) [Pectinodesmus pectinatus] |
