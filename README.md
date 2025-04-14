@@ -18,15 +18,17 @@ This script fetches gene sequences from NCBI databases based on taxonomy IDs (ta
 
 
 ## Contents
- - [Installation](##installation)
- - [Example data](#example-data)
- - [Input](#input)
+ - [Installation](#installation)
+ - [Usage](#usage)
+ - [Input](#example-input-data)
  - [Output](#output)
- - [Filtering contaminants](#filtering-contaminants)
- - [Assembly and annotation only](#assembly-and-annotation-only)
- - [Running your own data](#running-your-own-data)
- - [Getting help](#getting-help)
- - [Citations](#citations)
+ - []()
+ - []()
+ - []()
+ - []()
+ - [Supported targets](#support-targets)
+ - [Benchmarking](#benchmarking)
+
 
 ## Installation
 First, clone the Gene Fetch GitHub repository in your current path
@@ -60,19 +62,25 @@ Optional
 -s/--single <taxid>: Taxonomic ID for sequence search (-i/--input ignored when -s mode is run).
 ```
 
-
-### samples.csv input file example
+## Input
+### Example 'samples.csv' input file
 | ID | taxid |
 | --- | --- |
-| BSNHM002-24  | 177658 |
-| BSNHM038-24 | 177627 |
-| BSNHM046-24 | 3084599 |
+| sample-1  | 177658 |
+| sample-2 | 177627 |
+| sample-3 | 3084599 |
 
-### Running gene_fetch.py on a cluster
-- See 1_gene_fetch.sh (for running via Slurm).
+### Example 'samples_taxonomy.csv' input file
+| ID | phylum | class | order | family | genus | species |
+| --- | --- | --- | --- | --- | --- | --- |
+| sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | Astomella hispaniae |
+| sample-2 | Arthropoda | Insecta | Hemiptera | Cicadellidae | Psammotettix | Psammotettix sabulicola |
+| sample-3 | Arthropoda | Insecta | Trichoptera | Limnephilidae | Dicosmoecus | palatus |
 
-## Output Structure
-### 'Normal' mode
+
+## Output
+### Output directory structure
+#### 'Normal' mode
 ```
 output_dir/
 ├── nucleotide/             # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
@@ -92,7 +100,7 @@ output_dir/
 | BSNHM002-24 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus: Apatania | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | abs/path/to/protein_references/BSNHM002-24_dna.fasta |
 
 
-### 'Single-taxid' mode
+#### 'Single-taxid' mode
 ```
 output_dir/
 ├── nucleotide/                      # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
@@ -113,6 +121,9 @@ output_dir/
 | BSNHM002-24 | 3086 | cytochrome c oxidase subunit I (mitochondrion) [Pectinodesmus pectinatus] |
 
 
+### Running gene_fetch.py on a cluster
+- See 1_gene_fetch.sh (for running via Slurm).
+- 
 ## Supported targets
 - Script functions with other gene/protein targets than those listed below, but has hard-coded synonymns to catch name variations (of the below targets). More targets can be added into script (see 'class config').
 - cox1/COI
@@ -126,3 +137,10 @@ output_dir/
 - 18s
 - 28s
 - 12s
+
+## Benchmarking
+| Sample number | Run mode | target | order | family | genus | species |
+| --- | --- | --- | --- | --- | --- | --- |
+| BSNHM002-24  | 177658 | --- | --- | --- | --- | --- |
+| BSNHM038-24 | 177627 | --- | --- | --- | --- | --- |
+| BSNHM046-24 | 3084599 | --- | --- | --- | --- | --- |
