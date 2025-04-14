@@ -103,7 +103,7 @@ python gene_fetch.py -e your.email@domain.com -k your_api_key \
 | --- | --- | --- | --- | --- | --- | --- |
 | sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | Astomella hispaniae |
 | sample-2 | Arthropoda | Insecta | Hemiptera | Cicadellidae | Psammotettix | Psammotettix sabulicola |
-| sample-3 | Arthropoda | Insecta | Trichoptera | Limnephilidae | Dicosmoecus | palatus |
+| sample-3 | Arthropoda | Insecta | Trichoptera | Limnephilidae | Dicosmoecus | Dicosmoecus palatus |
 
 
 ## Output
@@ -119,13 +119,15 @@ output_dir/
 ├── sample-2.fasta
 ├── sequence_references.csv     # Sequence metadata.
 ├── failed_searches.csv         # Failed search attempts (if any).
-└── gene_fetch.log              # Operation log.
+└── gene_fetch.log              # Log.
 ```
 
 **sequence_references.csv output example**
 | ID | taxid | protein_accession | protein_length | nucleotide_accession | nucleotide_length | matched_rank | ncbi_taxonomy | reference_name | protein_reference_path | nucleotide_reference_path |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| BSNHM002-24 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus: Apatania | Eukaryota, ..., Apataniinae, Apatania | BSNHM002-24 | abs/path/to/protein_references/BSNHM002-24.fasta | abs/path/to/protein_references/BSNHM002-24_dna.fasta |
+| sample-1 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus: Apatania | Eukaryota, ..., Apataniinae, Apatania | sample-1 | abs/path/to/protein_references/sample-1.fasta | abs/path/to/protein_references/sample-1_dna.fasta |
+| sample-2 | **XYZ** | **XYZ** | **XYZ** | **XYZ** | **XYZ** | genus: **XYZ** | Eukaryota, ..., **XYZ**, **XYZ** | sample-2 | abs/path/to/protein_references/sample-2.fasta | abs/path/to/protein_references/sample-2_dna.fasta |
+| sample-3 | **XYZ** | **XYZ** | **XYZ** | **XYZ** | **XYZ** | genus: **XYZ** | Eukaryota, ..., **XYZ**, **XYZ** | sample-3 | abs/path/to/protein_references/sample-3.fasta | abs/path/to/protein_references/sample-3_dna.fasta |
 
 
 #### 'Single-taxid' mode
@@ -139,8 +141,8 @@ output_dir/
 ├── ACCESSION2.fasta
 ├── fetched_nucleotide_sequences.csv # Only populated if '--type nucleotide/both' utilised. Sequence metadata.
 ├── fetched_protein_sequences.csv    # Only populated if '--type protein/both' utilised. Sequence metadata.
-├── failed_searches.csv              # Failed search attempts (ideally empty)
-└── gene_fetch.log                   # Operation log
+├── failed_searches.csv              # Failed search attempts (if any).
+└── gene_fetch.log                   # Log.
 ```
 
 **fetched_protein|nucleotide_sequences.csv output example**
@@ -151,7 +153,7 @@ output_dir/
 
 ### Running gene_fetch on a cluster
 - See 1_gene_fetch.sh (for running via Slurm).
-
+-**UPDATE**
 
 ## Supported targets
 - Script functions with other gene/protein targets than those listed below, but has hard-coded synonymns to catch name variations (of the below targets). More targets can be added into script (see 'class config').
@@ -184,8 +186,7 @@ output_dir/
 | 570 Arthropods | 'normal' | taxonomy.csv | COX1 | both | 10G, 18 | 02:51:06 |
 | 570 Arthropods | 'normal' | samples.csv | COX1 | nucleotide | 5G, 4 | **TBC** |
 | All _A. thaliana_ sequences >300aa  | 'single-taxid' | N/A | rbcL | protein | 5G, 1 | 00:02:39 |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- | --- | --- |
 
 
 ## Contributions and citations
