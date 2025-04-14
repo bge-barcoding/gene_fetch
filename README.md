@@ -18,27 +18,26 @@ This script fetches gene sequences from NCBI databases based on taxonomy IDs (ta
 ## Usage
 ```bash
 python gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> -i/--in <samples.csv> --type <sequence_type>
-                        [--protein_size <min_size>] [--nucleotide_size <min_size>] [-s/--single <taxid>]
+                        [--protein_size <min_size>] [--nucleotide_size <min_size>] [-s/--single <taxid>] [-i/--in2 <samples_taxonomy.csv>]
 
 Required:
   -e/--email <email_address>: Email address used for NCBI account
   -k/--api-key <key>: API key to use for NCBI API requests
   -g/--gene <gene_name>: Name of gene to search for in NCBI RefSeq database (e.g., cox1/16s/rbcl).
   -o/--out <output_directory>: Path to directory to save output files. The directory will be created if it does not exist.
-  -i/--in <samples.csv>: Path to input CSV file containing Process IDs (ID column) and TaxIDs (taxid column).
+  -i/--in <samples.csv>: Path to input CSV file containing sample IDs (ID column) and TaxIDs (taxid column).
+  -i2/--in2 <samples_taxonomy.csv>: Path to alternative input CSV file containing sample IDs (ID column) and taxonomic heirarchies (phylum, class, order, family, genus, and species columns) for each sample.
   --type: Sequence type to fetch ('protein', 'nucleotide', or 'both')
 
 Optional
 --protein_size: Minimum protein sequence length (default: 500).
 --nucleotide_size: Minimum nucleotide sequence length (default: 1500).
 -s/--single <taxid>: Taxonomic ID for sequence search (-i/--input ignored when -s mode is run).
-```
-- ./snakemakeSFU/workflow/envs/fetch.yaml contains all necessary dependencies to run the script. Can create conda env using commmand below (once conda is installed on your system).
-```
+
 conda env create -f fetch.yaml
 #contains following dependencies:
 #Python>=3.9
-#biopython>=1.84
+#biopython>=1.80
 #ratelimit>=2.2.1
 ```
 
