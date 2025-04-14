@@ -6,10 +6,10 @@
 This script fetches gene sequences from NCBI databases based on taxonomy IDs (taxids). It can retrieve both protein and nucleotide sequences, with support for various genes including protein-coding genes (e.g., cox1, cox2, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 - Fetch protein and/or nucleotide sequences from NCBI databases using taxonomic ID (taxid). Handles both direct nucleotide sequences and protein-linked nucleotide references.
-- Support for both protein-coding and rRNA genes.
+- Support for both protein-coding and rDNA genes.
 - Customisable length filtering thresholds
-- Taxonomic traversal: If sequences are not found at the input taxonomic level (e.g. species), searches up higher taxonomic ranks (genus, family, etc.)
-- Automatic taxonomy traversal using NCBI lineage for given taxid when sequences are not found at input taxonomic level. By traversing up the fetched NCBI lineage and validating higher taxonomy, potential homonyms are avoided.
+- Automatic taxonomy traversal using NCBI lineage for given taxid when sequences are not found at input taxonomic level. I.e. If sequences are not found at the input taxonomic level (e.g. species), the script searches up higher taxonomic ranks (genus, family, etc.) until one is found.
+- By traversing up the fetched NCBI lineage and validating higher taxonomy, potential homonyms are avoided.
 - Robust error handling, logging, and NCBI API rate limiting to comply with guidelines (10 requests/second. Requires valid NCBI API key and email for optimal performance).
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both).
 - Single-taxid mode (-s/--single) for retrieving all available sequences for a specific taxon (-i not required)
