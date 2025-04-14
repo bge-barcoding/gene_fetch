@@ -3,7 +3,7 @@
 </div>
 
 # Gene_fetch 
-This script fetches gene sequences from NCBI databases based on taxonomy IDs (taxids). It can retrieve both protein and nucleotide sequences, with support for various genes including protein-coding genes (e.g., cox1, cox2, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
+This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxids) or taxonomic information. It can retrieve both protein and nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 ## Features
 - Fetch protein and/or nucleotide sequences from NCBI databases using taxonomic ID (taxid). Handles both direct nucleotide sequences and protein-linked nucleotide references.
@@ -21,24 +21,25 @@ This script fetches gene sequences from NCBI databases based on taxonomy IDs (ta
  - [Installation](#installation)
  - [Usage](#usage)
  - [Input](#input)
+ - [Examples](#Examples)
  - [Output](#output)
- - []()
- - []()
- - []()
- - []()
+ - [Cluster](#running-gene_fetch-on-a-cluster)
  - [Supported targets](#supported-targets)
  - [Benchmarking](#benchmarking)
+ - [Contributions and citation](#contributions-and-citations)
 
 
 ## Installation
 First, clone the Gene Fetch GitHub repository to your current path, and enter the Gene Fetch installation directory 
 ```bash
 git clone https://github.com/bge-barcoding/gene_fetch
+
 cd gene_fetch
 ```
 Run the commands below to install the necessary dependencies and activate the conda environment. [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) must be installed.
 ```bash
 conda env create -n fetch -f fetch.yaml
+
 conda activate fetch
 ```
 
@@ -46,6 +47,9 @@ conda activate fetch
 ```bash
 python gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> -i/--in <samples.csv> --type <sequence_type>
                         [--protein_size <min_size>] [--nucleotide_size <min_size>] [-s/--single <taxid>] [-i/--in2 <samples_taxonomy.csv>]
+```
+
+* `--h/--help` show help and exit.
 
 Required:
   -e/--email <email_address>: Email address used for NCBI account
@@ -60,7 +64,6 @@ Optional
 --protein_size: Minimum protein sequence length (default: 500).
 --nucleotide_size: Minimum nucleotide sequence length (default: 1500).
 -s/--single <taxid>: Taxonomic ID for sequence search (-i/--input ignored when -s mode is run).
-```
 
 ## Input
 ### Example 'samples.csv' input file
@@ -121,9 +124,10 @@ output_dir/
 | BSNHM002-24 | 3086 | cytochrome c oxidase subunit I (mitochondrion) [Pectinodesmus pectinatus] |
 
 
-### Running gene_fetch.py on a cluster
+### Running gene_fetch on a cluster
 - See 1_gene_fetch.sh (for running via Slurm).
-- 
+
+
 ## Supported targets
 - Script functions with other gene/protein targets than those listed below, but has hard-coded synonymns to catch name variations (of the below targets). More targets can be added into script (see 'class config').
 - cox1/COI
@@ -149,4 +153,4 @@ output_dir/
 ## Contributions and citations
 GeneFetch was written by Dan Parsons and Ben Price @ NHMUK (2024)
 
-If you use GeneFetch, please cite our publication: 
+If you use GeneFetch, please cite our publication: XYZ()
