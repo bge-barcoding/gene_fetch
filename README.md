@@ -9,22 +9,22 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
 - Fetch protein and/or nucleotide sequences from NCBI databases using taxonomic ID (taxid). Handles both direct nucleotide sequences and protein-linked nucleotide references.
 - Support for both protein-coding and rDNA genes.
 - Customisable length filtering thresholds
-- Automatic taxonomy traversal using NCBI lineage for given taxid when sequences are not found at input taxonomic level. I.e. If sequences are not found at the input taxonomic level (e.g. species), the script searches up higher taxonomic ranks (genus, family, etc.) until one is found.
-- By traversing up the fetched NCBI lineage and validating higher taxonomy, potential homonyms are avoided.
-- Robust error handling, logging, and NCBI API rate limiting to comply with guidelines (10 requests/second. Requires valid NCBI API key and email for optimal performance).
+- Automatic taxonomy traversal using NCBI lineage for given taxid when sequences are not found at input taxonomic level. I.e., If sequences are not found at the input taxonomic level (e.g. species), the script searches up higher taxonomic ranks (genus, family, etc.) until a suitable sequence is found.
+- By traversing up the fetched NCBI lineage and validating higher taxonomy, potential taxonomic homonyms are avoided.
+- Robust error handling, logging, and NCBI API rate limiting to comply with guidelines (10 requests/second).
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both).
-- Single-taxid mode (-s/--single) for retrieving all available sequences for a specific taxon (-i not required)
-- 'Checkpointing' available: If a sample fails during a run, the script can be rerun using the same arguments, and it will skip IDs with entries already in the sequence_references.csv and with .fasta files already present in the output directory.
-
+- Single-taxid mode (-s/--single) for retrieving all available sequences of a target gene/protein for a specific taxon.
+- 'Checkpointing' implemented: if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
 
 ## Contents
  - [Installation](#installation)
  - [Usage](#usage)
- - [Input](#input)
  - [Examples](#Examples)
+ - [Input](#input)
  - [Output](#output)
  - [Cluster](#running-gene_fetch-on-a-cluster)
  - [Supported targets](#supported-targets)
+ - [Notes](#notes)
  - [Benchmarking](#benchmarking)
  - [Contributions and citation](#contributions-and-citations)
 
@@ -62,15 +62,38 @@ python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <sampl
 * `--protein_size`: Minimum protein sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 500).
 * `--nucleotide_size`: Minimum nucleotide sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 1500).
 
+## Examples
+Fetch both protein and nucleotide sequences for COI with default sequence length thresholds.
+```
+python gene_fetch.py -e your.email@domain.com -k your_api_key \
+                    -g cox1 -o ./output_dir -i ./samples.csv \
+                    --type both
+```
+
+Fetch rbcL nucleotide sequences using sample taxonomic information, applying a minimum nucleotide sequence length of 1000bp
+```
+python gene_fetch.py -e your.email@domain.com -k your_api_key \
+                    -g rbcl -o ./output_dir -i2 ./taxonomy.csv \
+                    --type nucleotide --nucleotide_size 1000
+```
+
+Retrieve all available matK nucleotide sequences for _Arabidopsis thaliana_ (taxid: 3702).
+```
+python gene_fetch.py -e your.email@domain.com -k your_api_key \
+                    -g matk -o ./output_dir -s 3702 \
+                    --type nucleotide
+```
+
+
 ## Input
-### Example 'samples.csv' input file
+### Example 'samples.csv' input file (-i/--in)
 | ID | taxid |
 | --- | --- |
 | sample-1  | 177658 |
 | sample-2 | 177627 |
 | sample-3 | 3084599 |
 
-### Example 'samples_taxonomy.csv' input file
+### Example 'samples_taxonomy.csv' input file (-i2/--in2)
 | ID | phylum | class | order | family | genus | species |
 | --- | --- | --- | --- | --- | --- | --- |
 | sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | Astomella hispaniae |
@@ -83,15 +106,15 @@ python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <sampl
 #### 'Normal' mode
 ```
 output_dir/
-├── nucleotide/             # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
-│   ├── SAMPLE1_dna.fasta   
-│   ├── SAMPLE2_dna.fasta
+├── nucleotide/                 # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
+│   ├── sample-1_dna.fasta   
+│   ├── sample-2_dna.fasta
 │   └── ...
-├── SAMPLE1.fasta           # Protein sequences.
-├── SAMPLE2.fasta
-├── sequence_references.csv # Sequence metadata.
-├── failed_searches.csv     # Failed search attempts.
-└── gene_fetch.log          # Operation log.
+├── sample-1.fasta              # Protein sequences.
+├── sample-2.fasta
+├── sequence_references.csv     # Sequence metadata.
+├── failed_searches.csv         # Failed search attempts (if any).
+└── gene_fetch.log              # Operation log.
 ```
 
 **sequence_references.csv output example**
@@ -139,15 +162,23 @@ output_dir/
 - 28s
 - 12s
 
+## Notes
+- Progress updates are logged every 10 samples by default
+- The tool avoids "unverified" sequences in GenBank entries by default
+- CDS extraction includes fallback mechanisms for atypical annotation formats
+- When more than 50 matching sequences are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders them by length, and processes the top 10 longest sequences.
+- In 'single-taxid' mode, default length thresholds are reduced (protein: 50aa, nucleotide: 100bp)
+- In 'single-taxid' mode, output files are named by their accession numbers.
+
 ## Benchmarking
-| Sample number | Run mode | target | resources allocated | run time |
-| 570 Arthropods | 'normal' | COX1 | 10G, 18 threads | --- |
+| Sample number | Run mode | target | resources allocated (memory, CPUs) | run time |
+| 570 Arthropods | 'normal' | COX1 | 10G, 18 | --- |
 | ---  | --- | --- | --- | --- |
 | --- | --- | --- | --- | --- |
 | --- | --- | --- | --- | --- |
 
 
 ## Contributions and citations
-GeneFetch was written by Dan Parsons and Ben Price @ NHMUK (2024)
+GeneFetch was written by Dan Parsons @ NHMUK (2024)
 
 If you use GeneFetch, please cite our publication: XYZ()
