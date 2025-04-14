@@ -7,7 +7,7 @@
 This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxids) or taxonomic information. It can retrieve both protein and nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 
-## Features
+## Features - UPDATE
 - Fetch protein and/or nucleotide sequences from NCBI databases using taxonomic ID (taxid). Handles both direct nucleotide sequences and protein-linked nucleotide references.
 - Support for both protein-coding and rDNA genes.
 - Customisable length filtering thresholds
@@ -182,13 +182,13 @@ output_dir/
 - In 'single-taxid' mode, output files are named by their accession numbers.
 
 ## Benchmarking
-| Sample number | Run mode | input | target | type | resources allocated (memory, CPUs) | run time (hh:mm:ss) |
-| 570 Arthropods | 'normal' | taxonomy.csv | COX1 | both | 10G, 18 | 02:51:06 |
-| 570 Arthropods | 'normal' | samples.csv | COX1 | nucleotide | 5G, 4 | **TBC** |
-| All _A. thaliana_ sequences >300aa  | 'single-taxid' | N/A | rbcL | protein | 5G, 1 | 00:02:39 |
+| Sample number | Run mode | input | type | resources allocated (memory, CPUs) | run time (hh:mm:ss) |
+| 570 Arthropod COX1 | 'normal' | taxonomy.csv | both | 10G, 18 | 02:51:06 |
+| 570 Arthropods COX1 | 'normal' | samples.csv | nucleotide | 5G, 4 | **TBC** |
+| All _A. thaliana_ rbcL sequences >300aa | 'single-taxid' | N/A | protein | 5G, 1 | 00:02:39 |
 
 
 ## Contributions and citations
 GeneFetch was written by Dan Parsons @ NHMUK (2024)
 
-If you use GeneFetch, please cite our publication: XYZ()
+If you use GeneFetch, please cite our publication: **XYZ()**
