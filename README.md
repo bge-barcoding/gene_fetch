@@ -2,8 +2,10 @@
     <img src="./Gene_fetch_logo.svg" width="300" alt="Gene Fetch Logo">
 </div>
 
+
 # Gene_fetch 
 This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxids) or taxonomic information. It can retrieve both protein and nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
+
 
 ## Features
 - Fetch protein and/or nucleotide sequences from NCBI databases using taxonomic ID (taxid). Handles both direct nucleotide sequences and protein-linked nucleotide references.
@@ -13,8 +15,9 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
 - By traversing up the fetched NCBI lineage and validating higher taxonomy, potential taxonomic homonyms are avoided.
 - Robust error handling, logging, and NCBI API rate limiting to comply with guidelines (10 requests/second).
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both).
-- Single-taxid mode (-s/--single) for retrieving all available sequences of a target gene/protein for a specific taxon.
+- Single-taxid mode (-s/--single) for retrieving available sequences of a target gene/protein for a specific taxon.
 - 'Checkpointing' implemented: if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
+
 
 ## Contents
  - [Installation](#installation)
@@ -43,6 +46,7 @@ conda env create -n fetch -f fetch.yaml
 conda activate fetch
 ```
 
+
 ## Usage
 ```bash
 python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o/--out <output_directory> 
@@ -56,11 +60,12 @@ python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <sampl
 * `i2/--in2`: Path to alternative input CSV file containing sample IDs and taxonomic information for each sample (see [Input](#input) section below).
 * `o/--out`: Path to output directory. The directory will be created if it does not exist.
 * `e/--email` and `-k/--api-key`: Email address and associated API key for NCBI account. An NCBI account is required to run this tool (due to otherwise strict API limitations) - information on how to create an NCBI account and find your API key can be found [here](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
-
 #### Optional arguments
-* `s/--single`: Taxonomic ID for 'single-taxid' sequence search mode (`-i` and `-i2` ignored when run with `-s` mode). 'Single-taxid' mode will fetch all target gene or protein sequences on GenBank for a specific taxonomic ID.
 * `--protein_size`: Minimum protein sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 500).
 * `--nucleotide_size`: Minimum nucleotide sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 1500).
+* `s/--single`: Taxonomic ID for 'single-taxid' sequence search mode (`-i` and `-i2` ignored when run with `-s` mode). 'Single-taxid' mode will fetch all target gene or protein sequences on GenBank for a specific taxonomic ID.
+* `--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single-taxid' mode).
+
 
 ## Examples
 Fetch both protein and nucleotide sequences for COI with default sequence length thresholds.
@@ -77,16 +82,16 @@ python gene_fetch.py -e your.email@domain.com -k your_api_key \
                     --type nucleotide --nucleotide_size 1000
 ```
 
-Retrieve all available matK nucleotide sequences for _Arabidopsis thaliana_ (taxid: 3702).
+Retrieve 1000 available matK protein sequences >400aa for _Arabidopsis thaliana_ (taxid: 3702).
 ```
 python gene_fetch.py -e your.email@domain.com -k your_api_key \
                     -g matk -o ./output_dir -s 3702 \
-                    --type nucleotide
+                    --type protein --protein_size 400 --max-sequences 1000
 ```
 
 
 ## Input
-### Example 'samples.csv' input file (-i/--in)
+**Example 'samples.csv' input file (-i/--in)**
 | ID | taxid |
 | --- | --- |
 | sample-1  | 177658 |
@@ -150,17 +155,21 @@ output_dir/
 
 ## Supported targets
 - Script functions with other gene/protein targets than those listed below, but has hard-coded synonymns to catch name variations (of the below targets). More targets can be added into script (see 'class config').
-- cox1/COI
-- cox2/COII
-- cox3/COIII
-- cytb
-- nd1
-- rbcl
-- matk
-- 16s
-- 18s
-- 28s
-- 12s
+- cox1/COI/cytochrome c oxidase subunit I
+- cox2/COII/cytochrome c oxidase subunit II
+- cox3/COIIIcytochrome c oxidase subunit III
+- cytb/cob/cytochrome b
+- nd1/NAD1/NADH dehydrogenase subunit 1
+- rbcL/RuBisCO/ribulose-1,5-bisphosphate carboxylase/oxygenase large subunit
+- matK/maturase K/maturase type II intron splicing factor
+- 16S ribosomal RNA/16s
+- SSU/18s
+- LSU/28s
+- 12S ribosomal RNA/12s
+- ITS (ITS1-5.8S-ITS2)
+- ITS1/internal transcribed spacer 1
+- ITS2/internal transcribed spacer 2
+- tRNA-Leucine/trnL
 
 ## Notes
 - Progress updates are logged every 10 samples by default
@@ -171,9 +180,10 @@ output_dir/
 - In 'single-taxid' mode, output files are named by their accession numbers.
 
 ## Benchmarking
-| Sample number | Run mode | target | resources allocated (memory, CPUs) | run time |
-| 570 Arthropods | 'normal' | COX1 | 10G, 18 | --- |
-| ---  | --- | --- | --- | --- |
+| Sample number | Run mode | input | target | type | resources allocated (memory, CPUs) | run time (hh:mm:ss) |
+| 570 Arthropods | 'normal' | taxonomy.csv | COX1 | both | 10G, 18 | 02:51:06 |
+| 570 Arthropods | 'normal' | samples.csv | COX1 | nucleotide | 5G, 4 | **TBC** |
+| All _A. thaliana_ sequences >300aa  | 'single-taxid' | N/A | rbcL | protein | 5G, 1 | 00:02:39 |
 | --- | --- | --- | --- | --- |
 | --- | --- | --- | --- | --- |
 
