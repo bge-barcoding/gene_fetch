@@ -5,6 +5,7 @@
 # Gene_fetch 
 This script fetches gene sequences from NCBI databases based on taxonomy IDs (taxids). It can retrieve both protein and nucleotide sequences, with support for various genes including protein-coding genes (e.g., cox1, cox2, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
+## Features
 - Fetch protein and/or nucleotide sequences from NCBI databases using taxonomic ID (taxid). Handles both direct nucleotide sequences and protein-linked nucleotide references.
 - Support for both protein-coding and rDNA genes.
 - Customisable length filtering thresholds
@@ -14,6 +15,30 @@ This script fetches gene sequences from NCBI databases based on taxonomy IDs (ta
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both).
 - Single-taxid mode (-s/--single) for retrieving all available sequences for a specific taxon (-i not required)
 - 'Checkpointing' available: If a sample fails during a run, the script can be rerun using the same arguments, and it will skip IDs with entries already in the sequence_references.csv and with .fasta files already present in the output directory.
+
+
+## Contents
+ - [Installation](##installation)
+ - [Example data](#example-data)
+ - [Input](#input)
+ - [Output](#output)
+ - [Filtering contaminants](#filtering-contaminants)
+ - [Assembly and annotation only](#assembly-and-annotation-only)
+ - [Running your own data](#running-your-own-data)
+ - [Getting help](#getting-help)
+ - [Citations](#citations)
+
+## Installation
+First, clone the Gene Fetch GitHub repository in your current path
+```bash
+git clone https://github.com/bge-barcoding/gene_fetch
+```
+
+```bash
+conda env create -f fetch.yaml
+conda activate fetch
+```
+
 
 ## Usage
 ```bash
@@ -33,12 +58,6 @@ Optional
 --protein_size: Minimum protein sequence length (default: 500).
 --nucleotide_size: Minimum nucleotide sequence length (default: 1500).
 -s/--single <taxid>: Taxonomic ID for sequence search (-i/--input ignored when -s mode is run).
-
-conda env create -f fetch.yaml
-#contains following dependencies:
-#Python>=3.9
-#biopython>=1.80
-#ratelimit>=2.2.1
 ```
 
 
