@@ -20,27 +20,27 @@ This script fetches gene sequences from NCBI databases based on taxonomy IDs (ta
 ## Contents
  - [Installation](#installation)
  - [Usage](#usage)
- - [Input](#example-input-data)
+ - [Input](#input)
  - [Output](#output)
  - []()
  - []()
  - []()
  - []()
- - [Supported targets](#support-targets)
+ - [Supported targets](#supported-targets)
  - [Benchmarking](#benchmarking)
 
 
 ## Installation
-First, clone the Gene Fetch GitHub repository in your current path
+First, clone the Gene Fetch GitHub repository to your current path, and enter the Gene Fetch installation directory 
 ```bash
 git clone https://github.com/bge-barcoding/gene_fetch
+cd gene_fetch
 ```
-
+Run the commands below to install the necessary dependencies and activate the conda environment. [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) must be installed.
 ```bash
-conda env create -f fetch.yaml
+conda env create -n fetch -f fetch.yaml
 conda activate fetch
 ```
-
 
 ## Usage
 ```bash
@@ -139,8 +139,14 @@ output_dir/
 - 12s
 
 ## Benchmarking
-| Sample number | Run mode | target | order | family | genus | species |
-| --- | --- | --- | --- | --- | --- | --- |
-| BSNHM002-24  | 177658 | --- | --- | --- | --- | --- |
-| BSNHM038-24 | 177627 | --- | --- | --- | --- | --- |
-| BSNHM046-24 | 3084599 | --- | --- | --- | --- | --- |
+| Sample number | Run mode | target | resources allocated | run time |
+| 570 Arthropods | 'normal' | COX1 | 10G, 18 threads | --- |
+| ---  | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
+
+
+## Contributions and citations
+GeneFetch was written by Dan Parsons and Ben Price @ NHMUK (2024)
+
+If you use GeneFetch, please cite our publication: 
