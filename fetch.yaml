@@ -4,13 +4,8 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
-  - python=3.11
-  - snakemake=7.32.4
-  - biopython=1.84
-  - requests>=2.32.3
-  - pandas
-  - trf  
-  - getorganelle>=1.7.7.1
+  - python>=3.9
   - pip
   - pip:
+    - biopython>=1.80
     - ratelimit>=2.2.1
