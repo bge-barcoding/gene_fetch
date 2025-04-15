@@ -124,9 +124,9 @@ output_dir/
 **sequence_references.csv output example**
 | ID | taxid | protein_accession | protein_length | nucleotide_accession | nucleotide_length | matched_rank | ncbi_taxonomy | reference_name | protein_reference_path | nucleotide_reference_path |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| sample-1 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus: Apatania | Eukaryota, ..., Apataniinae, Apatania | sample-1 | abs/path/to/protein_references/sample-1.fasta | abs/path/to/protein_references/sample-1_dna.fasta |
-| sample-2 | **XYZ** | **XYZ** | **XYZ** | **XYZ** | **XYZ** | genus: **XYZ** | Eukaryota, ..., **XYZ**, **XYZ** | sample-2 | abs/path/to/protein_references/sample-2.fasta | abs/path/to/protein_references/sample-2_dna.fasta |
-| sample-3 | **XYZ** | **XYZ** | **XYZ** | **XYZ** | **XYZ** | genus: **XYZ** | Eukaryota, ..., **XYZ**, **XYZ** | sample-3 | abs/path/to/protein_references/sample-3.fasta | abs/path/to/protein_references/sample-3_dna.fasta |
+| sample-1 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus:Apatania | Eukaryota; ...; Apataniinae; Apatania | sample-1 | abs/path/to/protein_references/sample-1.fasta | abs/path/to/protein_references/sample-1_dna.fasta |
+| sample-2 | 2719103 | QNE85983.1 | 518 | MT410852.1 | 1557 | species:Isoptena serricornis | Eukaryota; ...; Chloroperlinae; Isoptena | sample-2 | abs/path/to/protein_references/sample-2.fasta | abs/path/to/protein_references/sample-2_dna.fasta |
+| sample-3 | 1876143 | YP_009526503.1 | 512 | NC_039659.1 | 1539 | genus:Triaenodes | Eukaryota; ...; Triaenodini; Triaenodes | sample-3 | abs/path/to/protein_references/sample-3.fasta | abs/path/to/protein_references/sample-3_dna.fasta |
 
 
 ### 'Single-taxid' mode
@@ -147,7 +147,10 @@ output_dir/
 **fetched_protein|nucleotide_sequences.csv output example**
 | ID | taxid | Description |
 | --- | --- | --- |
-| BSNHM002-24 | 3086 | cytochrome c oxidase subunit I (mitochondrion) [Pectinodesmus pectinatus] |
+| PQ645072.1 | 1501 | Ochlerotatus nigripes isolate Pool11 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
+| PQ645071.1 | 1537 | Ochlerotatus nigripes isolate Pool10 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
+| PQ645070.1 | 1501 | Ochlerotatus impiger isolate Pool2 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
+| PQ645069.1 | 1518	| Ochlerotatus impiger isolate Pool1 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
 
 
 ### Running gene_fetch on a cluster
@@ -161,6 +164,7 @@ output_dir/
 - cox3/COIIIcytochrome c oxidase subunit III
 - cytb/cob/cytochrome b
 - nd1/NAD1/NADH dehydrogenase subunit 1
+- nd2/NAD2/NADH dehydrogenase subunit 2
 - rbcL/RuBisCO/ribulose-1,5-bisphosphate carboxylase/oxygenase large subunit
 - matK/maturase K/maturase type II intron splicing factor
 - 16S ribosomal RNA/16s
@@ -183,10 +187,11 @@ output_dir/
 ## Benchmarking
 | Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time |
 |--------------------|----------|--------|------------|-----------|--------|------|----------|
-| 570 Arthropod Samples | Normal | COX1 | taxonomy.csv | Both | 10G | 18 | 02:51:06 |
-| 570 Arthropod Samples | Normal | COX1 | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
-| 570 Arthropod Samples | Normal | COX1 | samples.csv | Protein | 5G | 4 | 01:50:31 |
-| A. thaliana Sequences >300aa | Single-taxid | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
+| 570 Arthropod samples | Normal | COX1 | taxonomy.csv | Both | 10G | 18 | 02:51:06 |
+| 570 Arthropod samples | Normal | COX1 | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
+| 570 Arthropod samples | Normal | COX1 | samples.csv | Protein | 5G | 4 | 01:50:31 |
+| All (159) _A. thaliana_ sequences >300aa | Single-taxid | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
+| 1000 Culicidae sequences >500bp | Single-taxid | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
 
 ## Contributions and citations
 GeneFetch was written by Dan Parsons @ NHMUK (2024)
