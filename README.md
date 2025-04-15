@@ -151,6 +151,7 @@ output_dir/
 | PQ645071.1 | 1537 | Ochlerotatus nigripes isolate Pool10 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
 | PQ645070.1 | 1501 | Ochlerotatus impiger isolate Pool2 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
 | PQ645069.1 | 1518	| Ochlerotatus impiger isolate Pool1 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
+| PP355486.1 | 581 | Aedes scutellaris isolate NC.033 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
 
 
 ### Running gene_fetch on a cluster
