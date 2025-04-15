@@ -185,6 +185,7 @@ output_dir/
 |-------------------|----------|------------|-----------|--------|------|----------|
 | 570 Arthropod COX1 Samples | Normal | taxonomy.csv | Both | 10G | 18 | 02:51:06 |
 | 570 Arthropod COX1 Samples | Normal | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
+| 570 Arthropod COX1 Samples | Normal | samples.csv | Protein | 5G | 4 | **00:00:00** |
 | A. thaliana rbcL Sequences >300aa | Single-Taxid | N/A | Protein | 5G | 1 | 00:02:39 |
 
 ## Contributions and citations
