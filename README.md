@@ -181,11 +181,11 @@ output_dir/
 - In 'single-taxid' mode, output files are named by their accession numbers.
 
 ## Benchmarking
-| Sample number | Run mode | input | type | resources allocated (memory, CPUs) | run time (hh:mm:ss) |
-| 570 Arthropod COX1 | 'normal' | taxonomy.csv | both | 10G, 18 | 02:51:06 |
-| 570 Arthropods COX1 | 'normal' | samples.csv | nucleotide | 5G, 4 | **TBC** |
-| All _A. thaliana_ rbcL sequences >300aa | 'single-taxid' | N/A | protein | 5G, 1 | 00:02:39 |
-
+| Sample Description | Run Mode | Input File | Data Type | Memory | CPUs | Run Time |
+|-------------------|----------|------------|-----------|--------|------|----------|
+| 570 Arthropod COX1 Samples | Normal | taxonomy.csv | Both | 10G | 18 | 02:51:06 |
+| 570 Arthropod COX1 Samples | Normal | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
+| A. thaliana rbcL Sequences >300aa | Single-Taxid | N/A | Protein | 5G | 1 | 00:02:39 |
 
 ## Contributions and citations
 GeneFetch was written by Dan Parsons @ NHMUK (2024)
