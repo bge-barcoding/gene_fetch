@@ -91,14 +91,14 @@ python gene_fetch.py -e your.email@domain.com -k your_api_key \
 
 
 ## Input
-**Example 'samples.csv' input file (-i/--in)**
+** Example 'samples.csv' input file (-i/--in) **
 | ID | taxid |
 | --- | --- |
 | sample-1  | 177658 |
 | sample-2 | 177627 |
 | sample-3 | 3084599 |
 
-### Example 'samples_taxonomy.csv' input file (-i2/--in2)
+** Example 'samples_taxonomy.csv' input file (-i2/--in2) **
 | ID | phylum | class | order | family | genus | species |
 | --- | --- | --- | --- | --- | --- | --- |
 | sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | Astomella hispaniae |
@@ -203,5 +203,7 @@ GeneFetch was written by Dan Parsons @ NHMUK (2024)
 - Expand on features section & into a 'highlights' section
  - Maybe include 'notes' section in these 2
 - Expand benchmarking and/or examples sections?
+- Expand on dependencies section to list packages as alternative to conda
+- 
 
 If you use GeneFetch, please cite our publication: **XYZ()**
