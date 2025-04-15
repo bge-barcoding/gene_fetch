@@ -107,8 +107,7 @@ python gene_fetch.py -e your.email@domain.com -k your_api_key \
 
 
 ## Output
-### Output directory structure
-#### 'Normal' mode
+### 'Normal' mode
 ```
 output_dir/
 ├── nucleotide/                 # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
@@ -130,7 +129,7 @@ output_dir/
 | sample-3 | **XYZ** | **XYZ** | **XYZ** | **XYZ** | **XYZ** | genus: **XYZ** | Eukaryota, ..., **XYZ**, **XYZ** | sample-3 | abs/path/to/protein_references/sample-3.fasta | abs/path/to/protein_references/sample-3_dna.fasta |
 
 
-#### 'Single-taxid' mode
+### 'Single-taxid' mode
 ```
 output_dir/
 ├── nucleotide/                      # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
