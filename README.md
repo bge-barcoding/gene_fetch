@@ -197,4 +197,11 @@ output_dir/
 ## Contributions and citations
 GeneFetch was written by Dan Parsons @ NHMUK (2024)
 
+
+# To Do
+- Add limitations/things it doesn't do section
+- Expand on features section & into a 'highlights' section
+ - Maybe include 'notes' section in these 2
+- Expand benchmarking and/or examples sections?
+
 If you use GeneFetch, please cite our publication: **XYZ()**
