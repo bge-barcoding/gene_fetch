@@ -160,11 +160,16 @@ output_dir/
 
 
 ### Running gene_fetch on a cluster
-- See '1_gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular).
- - Edit 'mem' and/or 'cpus-per-task' to set memory and CPU/threads allocation.
+- See '1_gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular). 
+- Edit 'mem' and/or 'cpus-per-task' to set memory and CPU/threads allocation.
+- Change paths and variables as needed.
+- Run '1_gene_fetch.sh' with:
+```
+sbatch 1_gene_fetch.sh
+```
 
 ## Supported targets
-- Script functions with other gene/protein targets than those listed below, but has hard-coded synonymns to catch name variations (of the below targets). More targets can be added into script (see 'class config').
+Gene Fetch does function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the below targets. More targets can be added into script (see 'class config').
 - cox1/COI/cytochrome c oxidase subunit I
 - cox2/COII/cytochrome c oxidase subunit II
 - cox3/COIIIcytochrome c oxidase subunit III
@@ -202,15 +207,14 @@ output_dir/
 
 
 ## Contributions and citations
-GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2024)
+GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2024).
 
+If you use GeneFetch, please cite our publication: **XYZ()**
+
+If you have any questions or suggested improvements, please do get in touch in the issues!
 
 # To Do
 - Add limitations/things it doesn't do section
 - Expand on features section & into a 'highlights' section
  - Maybe include 'notes' section in these 2
 - Expand benchmarking and/or examples sections?
-- Expand on dependencies section to list packages as alternative to conda
-- 
-
-If you use GeneFetch, please cite our publication: **XYZ()**
