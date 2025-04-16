@@ -58,16 +58,15 @@ pip install biopython>=1.80
 ```bash
 python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o/--out <output_directory> 
 ```
-### Options
 * `--h/--help`: Show help and exit.
-#### Required arguments
+### Required arguments
 * `-g/--gene`: Name of gene to search for in NCBI GenBank database (e.g., cox1/16s/rbcl).
 * `--type`: Sequence type to fetch; 'protein', 'nucleotide', or 'both' ('both' will initially search and fetch a protein sequence, and then fetches the corresponding nucleotide CDS for that protein sequence).
 * `-i/--in`: Path to input CSV file containing sample IDs and TaxIDs (see [Input](#input) section below).
 * `i2/--in2`: Path to alternative input CSV file containing sample IDs and taxonomic information for each sample (see [Input](#input) section below).
 * `o/--out`: Path to output directory. The directory will be created if it does not exist.
 * `e/--email` and `-k/--api-key`: Email address and associated API key for NCBI account. An NCBI account is required to run this tool (due to otherwise strict API limitations) - information on how to create an NCBI account and find your API key can be found [here](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
-#### Optional arguments
+####= Optional arguments
 * `--protein_size`: Minimum protein sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 500).
 * `--nucleotide_size`: Minimum nucleotide sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 1500).
 * `s/--single`: Taxonomic ID for 'single-taxid' sequence search mode (`-i` and `-i2` ignored when run with `-s` mode). 'Single-taxid' mode will fetch all target gene or protein sequences on GenBank for a specific taxonomic ID.
@@ -161,7 +160,7 @@ output_dir/
 | PP355486.1 | 581 | Aedes scutellaris isolate NC.033 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
 
 
-### Running gene_fetch on a cluster
+## Running gene_fetch on a cluster
 - See '1_gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular). 
 - Edit 'mem' and/or 'cpus-per-task' to set memory and CPU/threads allocation.
 - Change paths and variables as needed.
@@ -207,9 +206,3 @@ GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2024).
 If you use GeneFetch, please cite our publication: **XYZ()**
 
 If you have any questions or suggested improvements, please do get in touch in the issues!
-
-# To Do
-- Add limitations/things it doesn't do section
-- Expand on features section & into a 'highlights' section
- - Maybe include 'notes' section in these 2
-- Expand benchmarking and/or examples sections?
