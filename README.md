@@ -39,13 +39,18 @@ git clone https://github.com/bge-barcoding/gene_fetch
 
 cd gene_fetch
 ```
-Run the commands below to install the necessary dependencies and activate the conda environment. [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) must be installed.
+Run the commands below to install the necessary dependencies and activate the Conda environment. [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) must be installed.
 ```bash
 conda env create -n fetch -f fetch.yaml
 
 conda activate fetch
 ```
-
+Alternatively, you can install the dependencies below directly or in your own Conda environment
+```
+pip install ratelimit>=2.2.1
+pip install biopython>=1.80
+pip install python>=3.9
+```
 
 ## Usage
 ```bash
@@ -191,11 +196,13 @@ output_dir/
 | 570 Arthropod samples | Normal | COX1 | taxonomy.csv | Both | 10G | 18 | 02:51:06 |
 | 570 Arthropod samples | Normal | COX1 | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
 | 570 Arthropod samples | Normal | COX1 | samples.csv | Protein | 5G | 4 | 01:50:31 |
+| 570 Arthropod samples | Normal | 18S | samples.csv | Nucleotide | 5G | 4 | 01:38:16 |
 | All (159) _A. thaliana_ sequences >300aa | Single-taxid | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
 | 1000 Culicidae sequences >500bp | Single-taxid | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
 
+
 ## Contributions and citations
-GeneFetch was written by Dan Parsons @ NHMUK (2024)
+GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2024)
 
 
 # To Do
