@@ -47,9 +47,9 @@ conda activate fetch
 ```
 Alternatively, you can install the dependencies below directly or in your own Conda environment
 ```
+conda install python>=3.9 pip
 pip install ratelimit>=2.2.1
 pip install biopython>=1.80
-pip install python>=3.9
 ```
 
 ## Usage
