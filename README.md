@@ -7,17 +7,19 @@
 This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxids) or taxonomic information. It can retrieve both protein and nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 
-## Features - UPDATE
-- Fetch protein and/or nucleotide sequences from NCBI databases using taxonomic ID (taxid). Handles both direct nucleotide sequences and protein-linked nucleotide references.
+## Feature highlight
+- Fetch protein and/or nucleotide sequences from NCBI GenBank database.
+- Handles both direct nucleotide sequences and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
+.
 - Support for both protein-coding and rDNA genes.
-- Customisable length filtering thresholds
-- Automatic taxonomy traversal using NCBI lineage for given taxid when sequences are not found at input taxonomic level. I.e., If sequences are not found at the input taxonomic level (e.g. species), the script searches up higher taxonomic ranks (genus, family, etc.) until a suitable sequence is found.
-- By traversing up the fetched NCBI lineage and validating higher taxonomy, potential taxonomic homonyms are avoided.
-- Robust error handling, logging, and NCBI API rate limiting to comply with guidelines (10 requests/second).
-- Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both).
-- Single-taxid mode (-s/--single) for retrieving available sequences of a target gene/protein for a specific taxon.
-- 'Checkpointing' implemented: if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
-
+- Single-taxid mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds are reduced (protein: 50aa, nucleotide: 100bp)).
+- Customisable length filtering thresholds for protein and nucleotide sequences.
+- Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. I.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
+- Validates fetched sequence using higher taxonomy, avoiding potential taxonomic homonyms.
+- Robust error handling, error and progress logging, and NCBI API rate limits (10 requests/second).
+- Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
+- 'Checkpointing': if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
+- When more than 50 matching sequences are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders them by length, and processes the top 10 longest sequences.
 
 ## Contents
  - [Installation](#installation)
@@ -187,13 +189,6 @@ Gene Fetch does function with other targets than those listed below, but it has 
 - ITS2/internal transcribed spacer 2
 - tRNA-Leucine/trnL
 
-## Notes
-- Progress updates are logged every 10 samples by default
-- The tool avoids "unverified" sequences in GenBank entries by default
-- CDS extraction includes fallback mechanisms for atypical annotation formats
-- When more than 50 matching sequences are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders them by length, and processes the top 10 longest sequences.
-- In 'single-taxid' mode, default length thresholds are reduced (protein: 50aa, nucleotide: 100bp)
-- In 'single-taxid' mode, output files are named by their accession numbers.
 
 ## Benchmarking
 | Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time |
