@@ -160,8 +160,8 @@ output_dir/
 
 
 ### Running gene_fetch on a cluster
-- See 1_gene_fetch.sh (for running via Slurm).
--**UPDATE**
+- See '1_gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular).
+ - Edit 'mem' and/or 'cpus-per-task' to set memory and CPU/threads allocation.
 
 ## Supported targets
 - Script functions with other gene/protein targets than those listed below, but has hard-coded synonymns to catch name variations (of the below targets). More targets can be added into script (see 'class config').
