@@ -19,7 +19,7 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
 - Robust error handling, error and progress logging, and NCBI API rate limits (10 requests/second).
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
 - 'Checkpointing': if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
-- When more than 50 matching sequences are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders them by length, and processes the top 10 longest sequences.
+- When more than 50 matching sequences are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders them by length, and processes the longest sequences.
 
 ## Contents
  - [Installation](#installation)
