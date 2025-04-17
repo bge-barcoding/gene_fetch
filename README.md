@@ -202,7 +202,7 @@ Gene Fetch does function with other targets than those listed below, but it has 
 | 1000 Culicidae sequences >500bp | Single-taxid | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
 | 1000 _M. tubercolisis_ sequences | Single-taxid | 16S | N/A | nucleotide | 20G | 16 | 00:10:33 |
 
-## Future Development:
+## Future Development
 - Add optional alignment of retrieved sequences
 - Add support for direct GenBank submission format output
 - Enhance LRU caching for taxonomy lookups to reduce API calls
