@@ -5,27 +5,15 @@ This script fetches gene sequences from NCBI databases based on taxonomy IDs (ta
 It can retrieve both protein and nucleotide sequences, with support for various genes
 including protein-coding genes (e.g., cox1, cox2, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
-Key Features:
-- Taxonomic traversal: If sequences are not found at the input taxonomic level (e.g. species), 
-  searches up higher taxonomic ranks (genus, family, etc.)
-- Selects the longest high-quality sequence when multiple matches exist
-- Customisable length filtering thresholds
-- CDS extraction for protein-coding genes when '--type both' is specified
-- Detailed logging of operations and progress tracking
-- Efficient processing of repeated taxonomy queries through caching
-- Optimised sequence retrieval by employing prefiltering step when >50 sequences found
-- Single-taxid mode (-s/--single) for retrieving all available sequences for a specific taxon (-i not required)
-- Rate limiting to comply with NCBI API guidelines (10 requests/second with API key)
-- Robust error handling with automatic retries for NCBI API calls, including exponential backoff
-
 Input:
 - NCBI account email address and API key (see: https://support.nlm.nih.gov/kbArticle/?pn=KA-05317)
-- CSV file containing taxonomy IDs (must have 'taxid' and 'ID' column)
-- Gene name (e.g., 'cox1', '16s', 'rbcl', 'matk')
+- CSV file containing sample IDs, taxonomy IDs or taxonomic heirarchy for sample
+- Target name (e.g., 'cox1', '16s', 'rbcl', 'matk', etc.)
 - Output directory path (will create new directories)
 - Sequence type ('protein', 'nucleotide', or 'both')
 - Optional: Minimum sequence length thresholds for filtering results
 - Optional: Single-taxid mode
+- Optional: maximum number of sequences to fetch (in single-taxid mode)
 
 Output:
 - FASTA files containing retrieved sequences (named by ID)
@@ -42,7 +30,7 @@ Dependencies:
 Usage:
     python gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> --type <sequence_type> 
                         [-i/--in <samples.csv>] [-s/--single <taxid>] 
-                        [--protein_size <min_size>] [--nucleotide_size <min_size>]
+                        [--protein-size <min_size>] [--nucleotide-size <min_size>]
                         [-e/--email <email>] [-k/--api-key <api_key>]
     
     # Required arguments:
@@ -55,58 +43,18 @@ Usage:
 
     # Optional arguments:
     -s/--single            Single TaxID to fetch all available sequences for
-    --protein_size         Minimum protein sequence length (default: 500)
-    --nucleotide_size      Minimum nucleotide sequence length (default: 1500)
-
-Examples:
-    # Single taxid mode for retrieving all available sequences
-    python gene_fetch.py -e your.email@domain.com -k your_api_key -g <gene_name> -o <output_directory> -s <taxid> --type <sequence_type>
-
-    # Get all available rbcL sequences for a specific plant family (taxid: 3700)
-    python gene_fetch.py -e your.email@domain.com -k your_api_key -g rbcl -o ./orchid_rbcl -s 3700 --type both
-
-    # Standard usage retrieving both protein and nucleotide sequences for cox1
-    python gene_fetch.py -e your.email@domain.com -k your_api_key -g cox1 -o ./output_dir -i ./samples.csv --type both --protein_size 500 --nucleotide_size 1500
-    
-    # Fetch only protein sequences for cytochrome b
-    python gene_fetch.py -e your.email@domain.com -k your_api_key -g cytb -o ./cytb_proteins -i arthropods.csv --type protein --protein_size 300
-    
-    # Retrieve 16S rRNA nucleotide sequences
-    python gene_fetch.py -e your.email@domain.com -k your_api_key -g 16s -o ./16s_sequences -i bacteria.csv --type nucleotide --nucleotide_size 1000
-    
-    # Using custom email and API key
-    python gene_fetch.py -e your.email@domain.com -k your_api_key -g cox1 -o ./output_dir -i ./samples.csv --type both 
-    
-Notes:
-- For protein-coding genes, --type both first fetches protein and then the corresponding nucleotide sequence
-- Progress updates are logged every 10 samples by default
-- NCBI API key is recommended and will increase rate limits from 3 to 10 requests/second
-- The tool avoids "unverified" sequences by default
-- CDS extraction includes fallback mechanisms for atypical annotation formats
-- When more than 50 matching sequences are found for a sample, the tool employs an efficient two-step process:
-  1. Fetches summary information for all matches to determine sequence lengths (using NCBI esummary API)
-  2. Processes only the top 10 longest sequences, significantly reducing full record API calls
-
-Single Mode Operation:
-- When using `-s/--single` flag with a taxid, the tool switches to exhaustive retrieval mode
-- In single mode, default length thresholds are reduced (protein: 100aa, nucleotide: 200bp)
-- All matching sequences are retrieved
-- Output files are named by their accession IDs
-- Useful for creating comprehensive reference databases or exploring variation within a taxon
-
-Future Development:
-- Implement more sophisticated sequence quality filtering based on metadata
-- Add optional alignment of retrieved sequences
-- Add support for direct GenBank submission format output
-- Enhance LRU caching for taxonomy lookups to reduce API calls
-- Improve efficiency of record searching and selecting the longest sequence
-- Add support for additional genetic markers beyond the currently supported set
+    --protein-size         Minimum protein sequence length (default: 500)
+    --nucleotide-size      Minimum nucleotide sequence length (default: 1500)
 
 Author: D. Parsons
-Version: 1.0.4
+Version: 1.0.5
 License: MIT
 """
 
+
+# =============================================================================
+# Imports and setup
+# =============================================================================
 import csv
 import sys
 import os
@@ -131,19 +79,6 @@ import re
 
 
 
-# Initialise logger at module level
-logger = logging.getLogger("gene_fetch")
-
-def log_progress(current: int, total: int, interval: int = 10) -> None:
-    """Log progress at specified intervals."""
-    if current == 0:
-        logger.info(f"Starting processing: 0/{total} samples processed (0%)")
-    elif current == total:
-        logger.info(f"Completed processing: {total}/{total} samples processed (100%)")
-    elif current % interval == 0:
-        percentage = (current / total) * 100
-        logger.info(f"Progress: {current}/{total} samples processed ({percentage:.2f}%)")
-
 
 def setup_argument_parser():
     parser = argparse.ArgumentParser(description='Fetch gene sequences from NCBI databases.')
@@ -154,8 +89,12 @@ def setup_argument_parser():
     parser.add_argument('-o', '--out', required=True,
                       help='Path to directory to save output files')
     
-    parser.add_argument('-i', '--in', required=True, dest='input_csv',
-                      help='Path to input CSV file containing TaxIDs')
+    # Create mutually exclusive group for input files
+    input_group = parser.add_mutually_exclusive_group(required=False)
+    input_group.add_argument('-i', '--in', dest='input_csv',
+                      help='Path to input CSV file containing TaxIDs (must have columns "taxid" and "ID")')
+    input_group.add_argument('-i2', '--in2', dest='input_taxonomy_csv',
+                      help='Path to input CSV file containing taxonomic information (must have columns "ID", "phylum", "class", "order", "family", "genus", "species")')
 
     parser.add_argument('-s', '--single', type=str,
                       help='Single TaxID to fetch all available sequences for')
@@ -163,10 +102,10 @@ def setup_argument_parser():
     parser.add_argument('--type', required=True, choices=['protein', 'nucleotide', 'both'],
                       help='Specify sequence type to fetch')
     
-    parser.add_argument('--protein_size', type=int, default=500,
+    parser.add_argument('--protein-size', type=int, default=500,
                       help='Minimum protein sequence length (default: 500)')
     
-    parser.add_argument('--nucleotide_size', type=int, default=1500,
+    parser.add_argument('--nucleotide-size', type=int, default=1500,
                       help='Minimum nucleotide sequence length (default: 1500)')
     
     parser.add_argument('-e', '--email', type=str, required=True,
@@ -174,190 +113,22 @@ def setup_argument_parser():
     
     parser.add_argument('-k', '--api-key', type=str, required=True,
                       help='API key to use for NCBI API requests (required)')
+                      
+    parser.add_argument('--max-sequences', type=int, default=None,
+                      help='Maximum number of sequences to fetch in single mode (only works with -s/--single)')
+    
     
     return parser
+	
 
-@dataclass
-class Config:
-        def __init__(self, email, api_key):
-            # Email and API key are now required
-            if not email:
-                raise ValueError("Email address is required for NCBI API requests. Use -e/--email to provide your email.")
-            if not api_key:
-                raise ValueError("API key is required for NCBI API requests. Use -k/--api-key to provide your API key.")
-            
-            self.email = email
-            self.api_key = api_key
-
-            # With API key, we can make up to 10 requests per second
-            self.max_calls_per_second = 10
-
-            # Default batch size for fetching sequences
-            self.fetch_batch_size = 100
-
-            # Delay between batches (seconds)
-            self.batch_delay = (1, 2)  # uniform random delay between 1-2 seconds
-
-            # Set search 'type'
-            self.valid_sequence_types = frozenset({'protein', 'nucleotide', 'both'})
-
-            # Minimum nucleotide and protein lengths for 'normal' mode
-            self.protein_length_threshold = 500
-            self.nucleotide_length_threshold = 1500
-            
-            # Minimum nucleotide and protein lengths for 'single' mode
-            self.min_nucleotide_size_single_mode = 200
-            self.min_protein_size_single_mode = 100
-            
-            self.gene_search_term = ""
-            
-            # Define gene type categories
-            self._rRNA_genes = {
-                '16s': [
-                    '16S ribosomal RNA[Title]',
-                    '16S rRNA[Title]',
-                    '16S[Title]',
-                ],
-                '18s': [
-                    '18S ribosomal RNA[Title]',
-                    '18S rRNA[Title]',
-                    '18S[Title]',
-                ],
-                '28s': [
-                    '28S ribosomal RNA[Title]',
-                    '28S rRNA[Title]',
-                    '28S[Title]',
-                ],
-                '12s': [
-                    '12S ribosomal RNA[Title]',
-                    '12S rRNA[Title]',
-                    '12S[Title]',
-                ]
-            }
-            
-            self._protein_coding_genes = {
-                'cox1': [
-                    'cox1[Gene]',
-                    'COI[Gene]',
-                    '"cytochrome c oxidase subunit 1"[Protein Name]',
-                    '"cytochrome oxidase subunit 1"[Protein Name]',
-                    '"cytochrome c oxidase subunit I"[Protein Name]',
-                    '"COX1"[Protein Name]',
-                    '"COXI"[Protein Name]'
-                ],
-                'cox2': [
-                    'cox2[Gene]',
-                    'COII[Gene]',
-                    '"cytochrome c oxidase subunit 2"[Protein Name]',
-                    '"cytochrome oxidase subunit 2"[Protein Name]',
-                    '"cytochrome c oxidase subunit II"[Protein Name]',
-                    '"COX2"[Protein Name]',
-                    '"COXII"[Protein Name]'
-                ],
-                'cox3': [
-                    'cox3[Gene]',
-                    'COIII[Gene]',
-                    '"cytochrome c oxidase subunit 3"[Protein Name]',
-                    '"cytochrome oxidase subunit 3"[Protein Name]',
-                    '"cytochrome c oxidase subunit III"[Protein Name]',
-                    '"COX3"[Protein Name]',
-                    '"COXIII"[Protein Name]'
-                ],
-                'cytb': [
-                    'cytb[Gene]',
-                    'cob[Gene]',
-                    '"cytochrome b"[Protein Name]',
-                    '"cytochrome b"[Gene]',
-                    '"CYTB"[Protein Name]'
-                ],
-                'nd1': [
-                    'nd1[Gene]',
-                    'NAD1[Gene]',
-                    '"NADH dehydrogenase subunit 1"[Protein Name]',
-                    '"ND1"[Protein Name]'
-                ],
-                'rbcl': [
-                    'rbcL[Gene]',
-                    'RBCL[Gene]',
-                    '"ribulose-1,5-bisphosphate carboxylase/oxygenase large subunit"[Protein Name]',
-                    '"ribulose 1,5-bisphosphate carboxylase/oxygenase large subunit"[Protein Name]',
-                    '"ribulose bisphosphate carboxylase large chain"[Protein Name]',
-                    '"RuBisCO large subunit"[Protein Name]',
-                    '"ribulose-1,5-bisphosphate carboxylase/oxygenase small subunit"[Protein Name]',
-                    '"ribulose 1,5-bisphosphate carboxylase/oxygenase small subunit"[Protein Name]',
-                    '"ribulose-1,5-bisphosphate carboxylase/oxygenase small chain"[Protein Name]',
-                    '"RuBisCO small subunit"[Protein Name]',
-                    '"Ribulose bisphosphate carboxylase/oxygenase activase"[Gene]',
-                    '"rbcL gene"[Gene]',
-                    '"RBCL gene"[Gene]',
-                    'rbcL[Title]',
-                    'RBCL[Title]',
-                    '"ribulose-1,5-bisphosphate carboxylase"[All Fields]',
-                    '"ribulose 1,5-bisphosphate carboxylase"[All Fields]', 
-                    '"ribulose bisphosphate carboxylase"[All Fields]',
-                    'RuBisCO[All Fields]'
-                ],
-                'matk': [
-                    'matK[Gene]',
-                    'MATK[Gene]',
-                    '"maturase K"[Protein Name]',
-                    '"maturase K"[Gene]',
-                    '"maturase-K"[Protein Name]',
-                    '"maturase-K"[Gene]',
-                    '"Maturase K"[Protein Name]',
-                    '"Maturase K"[Gene]',
-                    '"matK gene"[Gene]',
-                    '"MATK gene"[Gene]',
-                    '"trnK-matK"[Gene]',
-                    '"maturase type II intron splicing factor"[Protein Name]',
-                    '"chloroplast group II intron splicing factor maturase K"[Protein Name]',
-                    '"type II intron maturase K"[Protein Name]',
-                    '"tRNA-lysine maturase K"[Protein Name]'
-                ]
-            }
-
-        def update_thresholds(self, protein_size: int, nucleotide_size: int):
-            """Update sequence length thresholds."""
-            self.protein_length_threshold = protein_size
-            self.nucleotide_length_threshold = nucleotide_size
-
-        def set_gene_search_term(self, gene_name: str):
-            """Set search term based on gene name and type."""
-            gene_name = gene_name.lower()
-            
-            # Check if it's an rRNA gene
-            if gene_name in self._rRNA_genes:
-                self.gene_search_term = '(' + ' OR '.join(self._rRNA_genes[gene_name]) + ')'
-                search_type = "rRNA"
-                
-            # Check if it's a protein-coding gene
-            elif gene_name in self._protein_coding_genes:
-                self.gene_search_term = '(' + ' OR '.join(self._protein_coding_genes[gene_name]) + ')'
-                search_type = "protein-coding"
-                
-            else:
-                # Generic search term for unknown genes
-                self.gene_search_term = (
-                    f'({gene_name}[Title] OR {gene_name}[Gene] OR "{gene_name}"[Text Word])'
-                )
-                search_type = "generic"
-                
-            return search_type  # Return the type for logging purposes
-
-
-
-def ensure_directory(path: Path) -> None:
-    """Ensure directory exists, create if it doesn't."""
+# Ensure diurectory exists and create if it doesn't
+def make_out_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
-
-
-
-
-
-
+	
+	
+# Setup logging with both file and console handlers
 def setup_logging(output_dir: Path) -> logging.Logger:
-    """Setup logging with both file and console handlers."""
-    ensure_directory(output_dir)
+    make_out_dir(output_dir)
     
     # Clear existing handlers
     logger.handlers.clear()
@@ -379,25 +150,37 @@ def setup_logging(output_dir: Path) -> logging.Logger:
 
 
 
+# Initialise logger at module level
+logger = logging.getLogger("gene_fetch")
 
+#Log progress at specified intervals
+def log_progress(current: int, total: int, interval: int = 10) -> None:
+    if current == 0:
+        logger.info("")
+        logger.info(f"Starting processing: 0/{total} samples processed (0%)")
+    elif current == total:
+        logger.info(f"Completed processing: {total}/{total} samples processed (100%)")
+    elif current % interval == 0:
+        percentage = (current / total) * 100
+        logger.info(f"=====   Progress: {current}/{total} samples processed ({percentage:.2f}%)")
+		
+
+# Check NCBI service status before searches using einfo endpoint
 def check_ncbi_status():
-    """Check NCBI service status using einfo endpoint."""
     try:
         handle = Entrez.einfo()
         result = Entrez.read(handle)
         handle.close()
-        # If we can successfully query einfo, services are up
+        # If einfo can be successfully queried then services are up
         return True
     except Exception as e:
         logger.warning(f"NCBI service check failed: {str(e)}")
         return False
+		
 
-
-
-
+# Enhanced retry decorator with NCBI status checking and increasing delay upon retry
 def enhanced_retry(exceptions: tuple, tries: int = 4, initial_delay: int = 10, 
                   backoff: int = 2, max_delay: int = 240):
-    """Enhanced retry decorator with NCBI status checking and longer delays."""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -442,13 +225,337 @@ def enhanced_retry(exceptions: tuple, tries: int = 4, initial_delay: int = 10,
             return None
         return wrapper
     return decorator
+	
+	
+# Identify the ID column from possible variations
+def get_process_id_column(header):
+    # Print what's in the header
+    logger.info("")
+    logger.info(f"CSV header detected: {header}")
+    
+    valid_names = ['ID', 'process_id', 'Process ID', 'process id', 'Process id', 
+                  'PROCESS ID', 'sample', 'SAMPLE', 'Sample']
+    
+    # Print repr of each header item to see invisible characters
+    for i, col in enumerate(header):
+        logger.info(f"Header column {i}: {repr(col)}")
+    
+    # Try direct comparison first
+    for col in header:
+        if col in valid_names:
+            logger.info(f"Found matching column: {col}")
+            return col
+    
+    # Try trimming whitespace (in case of spaces)
+    for col in header:
+        trimmed = col.strip()
+        if trimmed in valid_names:
+            logger.info(f"Found matching column after trimming: {trimmed}")
+            return col
+    
+    # Last resort: try case-insensitive comparison
+    for col in header:
+        if col.upper() in [name.upper() for name in valid_names]:
+            logger.info(f"Found matching column case-insensitive: {col}")
+            return col
+    
+    logger.error(f"No matching column found in {header}")
+    return None
+	
+	
 
 
+# =============================================================================
+# Configuration
+# =============================================================================
+@dataclass
+class Config:
+        def __init__(self, email, api_key):
+            # Email and API key required
+            if not email:
+                raise ValueError("Email address is required for NCBI API requests. Use -e/--email to provide your email.")
+            if not api_key:
+                raise ValueError("API key is required for NCBI API requests. Use -k/--api-key to provide your API key.")
+            
+            self.email = email
+            self.api_key = api_key
+
+            # With an API key, 10 requests per second can be made
+            self.max_calls_per_second = 10
+
+            # Default batch size for fetching sequences
+            self.fetch_batch_size = 200
+
+            # Delay between batches (seconds) - uniform random delay between 1-2 seconds
+            self.batch_delay = (1, 2)  
+
+            # Set search 'type'
+            self.valid_sequence_types = frozenset({'protein', 'nucleotide', 'both'})
+
+            # Minimum nucleotide and protein lengths for 'normal' mode
+            self.protein_length_threshold = 500
+            self.nucleotide_length_threshold = 1500
+            
+            # Minimum nucleotide and protein lengths for 'single' mode
+            self.min_nucleotide_size_single_mode = 200
+            self.min_protein_size_single_mode = 100
+            
+            self.gene_search_term = ""
+            
+            # Define gene type categories
+            self._rRNA_genes = {
+                '16s': [
+                    '16S ribosomal RNA[Title]',
+                    '16S rRNA[Title]',
+                    '16S[Title]',
+                    '16S rDNA[Title]',
+                    '16S ribosomal DNA[Title]',
+                    '16s ribosomal[Title]',
+                    'rDNA 16S[Title]',
+                    'rrn16[Gene]',
+                    'rrs[Gene]',
+                    '16S ribosomal RNA[Gene]',
+                    'rrn16[rRNA]',
+                    'rrs[rRNA]',
+                    '16S ribosomal RNA[rRNA]',
+                    'NOT methylase[Title]', 
+                    'NOT methyltransferase[Title]',
+                ],
+                '23s': [
+                    '23S ribosomal RNA[Title]',
+                    '23S rRNA[Title]',
+                    '23S[Title]',
+                    '23S rDNA[Title]',
+                    '23S ribosomal DNA[Title]',
+                    '23s ribosomal[Title]',
+                    'rDNA 23S[Title]',
+                    'rrl[Gene]',
+                    'rrn23[Gene]',
+                    '23S ribosomal RNA[Gene]',
+                    'NOT methylase[Title]', 
+                    'NOT methyltransferase[Title]',
+                ],
+                '18s': [
+                    '18S ribosomal RNA[Title]',
+                    '18S rRNA[Title]',
+                    '18S[Title]',
+                    '18S rDNA[Title]',
+                    '18S ribosomal DNA[Title]',
+                    'SSU rRNA[Title]',
+                    'SSU ribosomal RNA[Title]',
+                    'small subunit ribosomal RNA[Title]',
+                    'small subunit rRNA[Title]',
+                    '18s ribosomal[Title]',
+                    'rDNA 18S[Title]',
+                    'rrn18[Gene]',
+                    'NOT methylase[Title]', 
+                    'NOT methyltransferase[Title]',
+                ],
+                '28s': [
+                    '28S ribosomal RNA[Title]',
+                    '28S rRNA[Title]',
+                    '28S[Title]',
+                    '28S rDNA[Title]',
+                    '28S ribosomal DNA[Title]',
+                    'LSU rRNA[Title]',
+                    'LSU ribosomal RNA[Title]',
+                    'large subunit ribosomal RNA[Title]',
+                    'large subunit rRNA[Title]',
+                    '28s ribosomal[Title]',
+                    'rDNA 28S[Title]',
+                    'rrn28[Gene]',
+                    'NOT methylase[Title]', 
+                    'NOT methyltransferase[Title]',
+                ],
+                '12s': [
+                    '12S ribosomal RNA[Title]',
+                    '12S rRNA[Title]',
+                    '12S[Title]',
+                    '12S rDNA[Title]',
+                    '12S ribosomal DNA[Title]',
+                    '12s ribosomal[Title]',
+                    'rDNA 12S[Title]',
+                    'mt-rrn1[Gene]',
+                    'mt 12S rRNA[Gene]',
+                    'NOT methylase[Title]', 
+                    'NOT methyltransferase[Title]',
+                ],
+                'its1': [
+                    'ITS1[Title]',
+                    'internal transcribed spacer 1[Title]',
+                    'ITS-1[Title]',
+                    'ITS 1[Title]',
+                    'ITS1 ribosomal DNA[Title]',
+                    'ITS1 rDNA[Title]',
+                ],
+                'its2': [
+                    'ITS2[Title]',
+                    'internal transcribed spacer 2[Title]',
+                    'ITS-2[Title]',
+                    'ITS 2[Title]',
+                    'ITS2 ribosomal DNA[Title]',
+                    'ITS2 rDNA[Title]',
+                ],
+                'its': [
+                    'ITS[Title]',
+                    'internal transcribed spacer[Title]',
+                    'ITS region[Title]',
+                    'ITS1-5.8S-ITS2[Title]',
+                    'ribosomal ITS[Title]',
+                    'rDNA ITS[Title]',
+                ],
+                'trnl': [
+                    'trnL[Title]',
+                    'trnL gene[Title]',
+                    'tRNA-Leu[Title]',
+                    'tRNA-Leucine[Title]',
+                    'trnL-trnF[Title]',
+                    'trnL-F[Title]',
+                    'chloroplast trnL[Title]',
+                    'cp trnL[Title]',
+                    'trnL intron[Title]',
+                    'trnL-UAA[Title]',
+                    '"trnL gene"[Gene]',
+                ]
+            }
+            
+            self._protein_coding_genes = {
+                'cox1': [
+                    'cox1[Gene]',
+                    'COI[Gene]',
+                    '"cytochrome c oxidase subunit 1"[Protein Name]',
+                    '"cytochrome oxidase subunit 1"[Protein Name]',
+                    '"cytochrome c oxidase subunit I"[Protein Name]',
+                    '"COX1"[Protein Name]',
+                    '"COXI"[Protein Name]'
+                ],
+                'cox2': [
+                    'cox2[Gene]',
+                    'COII[Gene]',
+                    '"cytochrome c oxidase subunit 2"[Protein Name]',
+                    '"cytochrome oxidase subunit 2"[Protein Name]',
+                    '"cytochrome c oxidase subunit II"[Protein Name]',
+                    '"COX2"[Protein Name]',
+                    '"COXII"[Protein Name]'
+                ],
+                'cox3': [
+                    'cox3[Gene]',
+                    'COIII[Gene]',
+                    '"cytochrome c oxidase subunit 3"[Protein Name]',
+                    '"cytochrome oxidase subunit 3"[Protein Name]',
+                    '"cytochrome c oxidase subunit III"[Protein Name]',
+                    '"COX3"[Protein Name]',
+                    '"COXIII"[Protein Name]'
+                ],
+                'cytb': [
+                    'cytb[Gene]',
+                    'cob[Gene]',
+                    '"cytochrome b"[Protein Name]',
+                    '"cytochrome b"[Gene]',
+                    '"CYTB"[Protein Name]'
+                ],
+                'nd1': [
+                    'nd1[Gene]',
+                    'NAD1[Gene]',
+                    '"NADH dehydrogenase subunit 1"[Protein Name]',
+                    '"ND1"[Protein Name]'
+                ],
+                'nd2': [
+                    'nd2[Gene]',
+                    'NAD2[Gene]',
+                    '"NADH dehydrogenase subunit 2"[Protein Name]',
+                    '"ND2"[Protein Name]'
+                ],
+                'rbcl': [
+                    'rbcL[Gene]',
+                    'RBCL[Gene]',
+                    '"ribulose-1,5-bisphosphate carboxylase/oxygenase large subunit"[Protein Name]',
+                    '"ribulose 1,5-bisphosphate carboxylase/oxygenase large subunit"[Protein Name]',
+                    '"ribulose bisphosphate carboxylase large chain"[Protein Name]',
+                    '"RuBisCO large subunit"[Protein Name]',
+                    '"ribulose-1,5-bisphosphate carboxylase/oxygenase small subunit"[Protein Name]',
+                    '"ribulose 1,5-bisphosphate carboxylase/oxygenase small subunit"[Protein Name]',
+                    '"ribulose-1,5-bisphosphate carboxylase/oxygenase small chain"[Protein Name]',
+                    '"RuBisCO small subunit"[Protein Name]',
+                    '"Ribulose bisphosphate carboxylase/oxygenase activase"[Gene]',
+                    '"rbcL gene"[Gene]',
+                    '"RBCL gene"[Gene]',
+                    'rbcL[Title]',
+                    'RBCL[Title]',
+                ],
+                'matk': [
+                    'matK[Gene]',
+                    'MATK[Gene]',
+                    '"maturase K"[Protein Name]',
+                    '"maturase K"[Gene]',
+                    '"maturase-K"[Protein Name]',
+                    '"maturase-K"[Gene]',
+                    '"Maturase K"[Protein Name]',
+                    '"Maturase K"[Gene]',
+                    '"matK gene"[Gene]',
+                    '"MATK gene"[Gene]',
+                    '"trnK-matK"[Gene]',
+                    '"maturase type II intron splicing factor"[Protein Name]',
+                    '"chloroplast group II intron splicing factor maturase K"[Protein Name]',
+                    '"type II intron maturase K"[Protein Name]',
+                    '"tRNA-lysine maturase K"[Protein Name]'
+                ],
+                'psba': [
+                    'psbA[Gene]',
+                    'PSBA[Gene]',
+                    '"photosystem II protein D1"[Protein Name]',
+                    '"photosystem II protein D1"[Gene]',
+                    '"PSII D1 protein"[Protein Name]',
+                    '"PSII D1 protein"[Gene]',
+                    '"photosystem II reaction center protein D1"[Protein Name]',
+                    '"photosystem II reaction center protein D1"[Gene]',
+                    '"photosystem Q(B) protein"[Protein Name]',
+                    '"32 kDa thylakoid membrane protein"[Protein Name]',
+                    '"psbA gene"[Gene]',
+                    '"PSBA gene"[Gene]',
+                    'psbA[Title]',
+                    'PSBA[Title]',
+                    '"trnH-psbA"[Title]',
+                    '"psbA-trnH"[Title]'
+                ]
+            }
+
+        # Update sequence length thresholds
+        def update_thresholds(self, protein_size: int, nucleotide_size: int):
+            self.protein_length_threshold = protein_size
+            self.nucleotide_length_threshold = nucleotide_size
+
+        # Set search term based on gene name and type
+        def set_gene_search_term(self, gene_name: str):
+            gene_name = gene_name.lower()
+            
+            # Check if rRNA
+            if gene_name in self._rRNA_genes:
+                self.gene_search_term = '(' + ' OR '.join(self._rRNA_genes[gene_name]) + ')'
+                search_type = "rRNA"
+                
+            # Check if protein-coding
+            elif gene_name in self._protein_coding_genes:
+                self.gene_search_term = '(' + ' OR '.join(self._protein_coding_genes[gene_name]) + ')'
+                search_type = "protein-coding"
+                
+            else:
+                # Generic search term for non-listed genes
+                self.gene_search_term = (
+                    f'({gene_name}[Title] OR {gene_name}[Gene] OR "{gene_name}"[Text Word])'
+                )
+                search_type = "generic"
+                
+            return search_type  # Return the type for logging purposes
+			
+			
+			
 
 
-
+# =============================================================================
+# Entrez API interactions and error handling
+# =============================================================================
 class EntrezHandler:
-    """Handles all Entrez API interactions with enhanced error handling."""
     def __init__(self, config: Config):
         self.config = config
         Entrez.email = config.email
@@ -457,21 +564,21 @@ class EntrezHandler:
         self.last_service_check = 0
         self.service_check_interval = 60  # Seconds between service checks
         
+	# Determine if service status check is needed
     def should_check_service_status(self) -> bool:
-        """Determine if we should perform a service status check."""
         current_time = time.time()
         if current_time - self.last_service_check > self.service_check_interval:
             return True
         return False
-        
+		
+    # Handle request errors and track consecutive failures
     def handle_request_error(self, error: Exception) -> None:
-        """Handle request errors and track consecutive failures."""
         self.consecutive_errors += 1
         if self.consecutive_errors >= 3 and self.should_check_service_status():
             service_status = check_ncbi_status()
             self.last_service_check = time.time()
             if not service_status:
-                logger.warning("Multiple consecutive errors and NCBI service appears to be down")
+                logger.warning("Multiple consecutive errors - NCBI service appears it might be down?")
                 sleep(uniform(30, 60))  # Longer delay when service is down
         
     def handle_request_success(self) -> None:
@@ -481,8 +588,8 @@ class EntrezHandler:
     @enhanced_retry((HTTPError, RuntimeError, IOError, IncompleteRead))
     @sleep_and_retry
     @limits(calls=10, period=1.1)
+	# Entrez efetch
     def fetch(self, **kwargs) -> Optional[Any]:
-        """Execute an Entrez efetch query with enhanced error handling."""
         try:
             result = Entrez.efetch(**kwargs)
             self.handle_request_success()
@@ -491,8 +598,8 @@ class EntrezHandler:
             self.handle_request_error(e)
             raise
 
+    # Entrez esearch in batches
     def search(self, **kwargs) -> Optional[Dict]:
-        """Execute an Entrez esearch query with enhanced error handling and pagination."""
         @enhanced_retry((HTTPError, RuntimeError, IOError, IncompleteRead))
         @sleep_and_retry
         @limits(calls=10, period=1.1)
@@ -531,33 +638,115 @@ class EntrezHandler:
         # Return modified result with all IDs
         initial_result['IdList'] = all_ids
         return initial_result
-
-
-
-
-class SequenceProcessor:
-    """Handles sequence processing and validation with WGS support."""
-    
+        
+		
+	# Fetch NCBI taxonomy ID from hierarchical taxonomic information, most specific level->phylum
+    def fetch_taxid_from_taxonomy(self, phylum, class_name, order, family, genus, species):
+	    # Log fetched sample taxonomy
+        logger.info(f"Fetching taxid for {genus} {species} (Family: {family}, Order: {order}, Class: {class_name}, Phylum: {phylum})")
+        
+        # Try species level first (most specific)
+        if genus and species:
+            # Create full species name by combining genus and species
+            full_species = f"{genus} {species}"
+            search_term = f"{full_species}[Scientific Name]"
+            logger.info(f"Searching for species: {search_term}")
+            try:
+                result = self.search(db="taxonomy", term=search_term)
+                if result and result.get("IdList") and len(result["IdList"]) > 0:
+                    taxid = result["IdList"][0]
+                    logger.info(f"Found taxid {taxid} for species {full_species}")
+                    return taxid
+            except Exception as e:
+                logger.error(f"Error searching for species taxid: {e}")
+        
+        # Try genus level next
+        if genus:
+            search_term = f"{genus}[Scientific Name] AND Metazoa[Organism]"
+            logger.info(f"Searching for genus: {search_term}")
+            try:
+                result = self.search(db="taxonomy", term=search_term)
+                if result and result.get("IdList") and len(result["IdList"]) > 0:
+                    taxid = result["IdList"][0]
+                    logger.info(f"Found taxid {taxid} for genus {genus}")
+                    return taxid
+            except Exception as e:
+                logger.error(f"Error searching for genus taxid: {e}")
+        
+        # Try family level
+        if family:
+            search_term = f"{family}[Scientific Name] AND Metazoa[Organism]"
+            logger.info(f"Searching for family: {search_term}")
+            try:
+                result = self.search(db="taxonomy", term=search_term)
+                if result and result.get("IdList") and len(result["IdList"]) > 0:
+                    taxid = result["IdList"][0]
+                    logger.info(f"Found taxid {taxid} for family {family}")
+                    return taxid
+            except Exception as e:
+                logger.error(f"Error searching for family taxid: {e}")
+        
+        # Try order level
+        if order:
+            search_term = f"{order}[Scientific Name] AND Metazoa[Organism]"
+            logger.info(f"Searching for order: {search_term}")
+            try:
+                result = self.search(db="taxonomy", term=search_term)
+                if result and result.get("IdList") and len(result["IdList"]) > 0:
+                    taxid = result["IdList"][0]
+                    logger.info(f"Found taxid {taxid} for order {order}")
+                    return taxid
+            except Exception as e:
+                logger.error(f"Error searching for order taxid: {e}")
+        
+        # Try class level
+        if class_name:
+            search_term = f"{class_name}[Scientific Name] AND Metazoa[Organism]"
+            logger.info(f"Searching for class: {search_term}")
+            try:
+                result = self.search(db="taxonomy", term=search_term)
+                if result and result.get("IdList") and len(result["IdList"]) > 0:
+                    taxid = result["IdList"][0]
+                    logger.info(f"Found taxid {taxid} for class {class_name}")
+                    return taxid
+            except Exception as e:
+                logger.error(f"Error searching for class taxid: {e}")
+        
+        # Try phylum level (least specific)
+        if phylum:
+            search_term = f"{phylum}[Scientific Name] AND Metazoa[Organism]"
+            logger.info(f"Searching for phylum: {search_term}")
+            try:
+                result = self.search(db="taxonomy", term=search_term)
+                if result and result.get("IdList") and len(result["IdList"]) > 0:
+                    taxid = result["IdList"][0]
+                    logger.info(f"Found taxid {taxid} for phylum {phylum}")
+                    return taxid
+            except Exception as e:
+                logger.error(f"Error searching for phylum taxid: {e}")
+        
+        logger.warning(f"Could not find taxid for {genus} {species}")
+        return None
+		
+		
+		
+		
+	
+# =============================================================================
+# Processing and validation of fetched entries and sequences
+# =============================================================================	
+class SequenceProcessor:  
     def __init__(self, config: Config, entrez: EntrezHandler):
         self.config = config
         self.entrez = entrez
         
+	# Handle 'contig' lines in feature table
     def parse_contig_line(self, contig_line: str) -> Optional[Tuple[str, int, int]]:
-        """
-        Parse a GenBank CONTIG line to extract WGS contig information.
-        
-        Args:
-            contig_line: The CONTIG line from a GenBank record
-            
-        Returns:
-            Optional[Tuple[str, int, int]]: (contig_id, start, end) if found
-        """
         try:
             # Remove 'join(' and ')' if present
             cleaned = contig_line.strip().replace('join(', '').replace(')', '')
             
-            # Parse the contig reference
-            # Format is typically: WVEN01000006.2:1..16118
+            # Parse the contig reference. Format is typically: WVEN01000006.2:1..16118
             if ':' in cleaned:
                 contig_id, coords = cleaned.split(':')
                 if '..' in coords:
@@ -567,6 +756,7 @@ class SequenceProcessor:
             logger.error(f"Error parsing CONTIG line '{contig_line}': {e}")
         return None
         
+	# Handle WGS records that might not contain sequence data, fetching associated sequence if listed in 'contig' line
     def fetch_wgs_sequence(self, record: SeqRecord) -> Optional[SeqRecord]:
         try:
             # Check for CONTIG line in annotations
@@ -610,7 +800,7 @@ class SequenceProcessor:
                 # Create new record with the sequence
                 new_record = record[:]
                 new_record.seq = sequence
-                logger.info(f"Successfully extracted {len(sequence)} bp from WGS contig")
+                logger.info(f"Successfully extracted {len(sequence)}bp from WGS contig")
                 
                 return new_record
                 
@@ -622,12 +812,10 @@ class SequenceProcessor:
             logger.error(f"Error processing WGS record: {e}")
             return None
 
+    # Wrapper function to fetch nucleotide sequences, including WGS records if they have an available sequence
     def fetch_nucleotide_record(self, record_id: str) -> Optional[SeqRecord]:
-        """
-        Fetch nucleotide sequence, including WGS records if they have an available fasta.
-        """
         try:
-            # Fetch the record
+            # Fetch the genbank record
             handle = self.entrez.fetch(db="nucleotide", id=record_id, rettype="gb", retmode="text")
             record = next(SeqIO.parse(handle, "genbank"))
             handle.close()
@@ -644,7 +832,7 @@ class SequenceProcessor:
             if is_wgs:
                 if record.seq is not None and len(record.seq) > 0:
                     try:
-                        # Verify we can access the sequence
+                        # Verify sequence can be accessed
                         seq_str = str(record.seq)
                         if seq_str and not seq_str.startswith('?'):
                             logger.info(f"WGS record {record_id} has a complete sequence of length {len(record.seq)}")
@@ -654,7 +842,7 @@ class SequenceProcessor:
                     except Exception as e:
                         logger.error(f"Error accessing sequence content for WGS record {record_id}: {e}")
                 
-                # If we don't have a complete sequence, check for CONTIG line
+                # If there is no sequence, check for 'contig' line
                 if 'contig' in record.annotations:
                     logger.info(f"WGS record {record_id} has a CONTIG line, attempting to fetch underlying sequence")
                     wgs_record = self.fetch_wgs_sequence(record)
@@ -663,7 +851,7 @@ class SequenceProcessor:
                     else:
                         logger.warning(f"Failed to fetch sequence from WGS CONTIG for {record_id}")
                 
-                # If we still don't have a sequence, log and return None
+                # If no sequence, log and return None
                 logger.info(f"WGS record {record_id} does not have a usable sequence - skipping")
                 return None
             
@@ -675,7 +863,7 @@ class SequenceProcessor:
             # For non-WGS and verified records, verify sequence content
             if record.seq is not None and len(record.seq) > 0:
                 try:
-                    # Verify we can access the sequence
+                    # Verify sequence can be accessed
                     _ = str(record.seq)
                     return record
                 except Exception as e:
@@ -688,12 +876,8 @@ class SequenceProcessor:
             logger.error(f"Error fetching nucleotide sequence for {record_id}: {e}")
             return None
 
-    def extract_nucleotide(self, record: SeqRecord, gene_name: str, single_mode: bool = False) -> Optional[SeqRecord]:
-            """
-            Extract CDS region from a sequence record with robust fallbacks for various sequence types.
-            """
-            logger.info(f"Attempting to extract CDS for gene {gene_name} (accession {record.id})")
-            
+    # Extract CDS region from a sequence record with fallbacks for sequence types and name variations
+    def extract_nucleotide(self, record: SeqRecord, gene_name: str, single_mode: bool = False) -> Optional[SeqRecord]:      
             # Prepare gene name variations for matching
             gene_variations = set()
             pattern_variations = []
@@ -718,7 +902,8 @@ class SequenceProcessor:
                         f'cytochrome c oxidase'
                     ]
                 elif base_gene == 'cytb':
-                    pattern_variations = ['cytb', 'cyt b', 'cyt-b', 'cytochrome b', 'cytochrome-b']
+                    pattern_variations = ['cytb', 'cyt b', 'cyt-b', 'cytochrome b', 'cytochrome-b'
+					]
                 elif base_gene == 'matk':
                     pattern_variations = [
                         'matk', 'mat-k', 'mat k', 'maturase k', 'maturase-k', 'maturase', 
@@ -763,9 +948,8 @@ class SequenceProcessor:
             elif base_gene == '16s' or base_gene == '16s rrna' or base_gene == 'rrn16':
                 pattern_variations = [
                     '16s', '16s rrna', '16s ribosomal rna', '16s ribosomal', 
-                    '16 s rrna', '16 s', 'rrn16', 'rrn 16', 
-                    'small subunit ribosomal rna', 'ssu rrna', 'ssu'
-                ]
+                    '16 s rrna', '16 s', 'rrn16', 'rrn 16'
+					]
             elif base_gene == '18s' or base_gene == '18s rrna' or base_gene == 'rrn18':
                 pattern_variations = [
                     '18s', '18s rrna', '18s ribosomal rna', '18s ribosomal', 
@@ -784,7 +968,7 @@ class SequenceProcessor:
                     'its 1', 'its 2', 'its1', 'its2', 'its 1-5.8s-its 2',
                     'ribosomal its', 'rrna its'
                 ]
-            elif base_gene == 'trnh-psba' or base_gene == 'psba-trnh':
+            elif base_gene == 'trnh-psba' or base_gene == 'psba-trnh' or base_gene == 'psba':
                 pattern_variations = [
                     'trnh-psba', 'psba-trnh', 'trnh psba', 'psba trnh',
                     'trnh-psba spacer', 'psba-trnh spacer', 'trnh-psba intergenic spacer',
@@ -794,7 +978,7 @@ class SequenceProcessor:
                 logger.warning(f"No defined variations for gene {gene_name}")
                 gene_variations = {gene_name.lower()}
                 
-            # If we have pattern variations, add them to regular variations
+            # If pattern variations are present, add them to regular variations
             if pattern_variations:
                 gene_variations.update(pattern_variations)
                 
@@ -812,8 +996,6 @@ class SequenceProcessor:
                 qualifiers = []
                 for field in ['gene', 'product', 'note']:
                     qualifiers.extend(feature.qualifiers.get(field, []))
-                    
-                # Log qualifiers for debugging
                 logger.info(f"Found CDS qualifiers: {qualifiers}")
                 
                 # Check for exact match first 
@@ -841,7 +1023,7 @@ class SequenceProcessor:
                             found_cds = feature
                             break
                 
-                # If we found an exact match, break the loop
+                # If exact match found then break loop
                 if found_cds:
                     break
                     
@@ -862,7 +1044,7 @@ class SequenceProcessor:
                         found_cds = feature
                         break
             
-            # If we found a matching CDS, extract it  
+            # If matching CDS found then extract it  
             if found_cds:
                 try:
                     cds_record = record[:]
@@ -872,12 +1054,12 @@ class SequenceProcessor:
                         logger.info(f"Successfully extracted CDS of length {len(cds_record.seq)} (accession {record.id})")
                         return cds_record
                     else:
-                        logger.warning(f"Extracted CDS too short ({len(cds_record.seq)} bp) (accession {record.id})")
+                        logger.warning(f"Extracted CDS too short ({len(cds_record.seq)}bp) (accession {record.id})")
                 except Exception as e:
                     logger.error(f"CDS extraction error for {record.id}: {e}")
                     logger.error("Full error details:", exc_info=True)
             
-            # If we're not in single mode, don't use fallbacks
+            # If not in single mode then don't use fallbacks
             if not single_mode:
                 logger.debug(f"No valid CDS found for gene {gene_name} (accession {record.id})")
                 return None
@@ -897,14 +1079,14 @@ class SequenceProcessor:
                 'nd5': 2000,    # Typical nd5 is ~1700bp
                 'matk': 2000,   # Typical matK is ~1500bp
                 'atp6': 1200,   # Typical atp6 is ~800bp
-                'atp8': 600,    # Typical atp8 is ~400bp
+                'atp8': 1000,    # Typical atp8 is ~400bp
                 '16s': 2000,    # Typical 16S is ~1600bp
                 '18s': 2500,    # Typical 18S is ~1800bp
                 '28s': 3500,    # Typical 28S can be ~3000bp
                 '12s': 1500,    # Typical 12S is ~1000bp
-                'its': 1000,    # Typical ITS region is ~700bp
-                'its1': 500,    # Typical ITS1 is ~300bp
-                'its2': 500,    # Typical ITS2 is ~350bp
+                'its': 3000,    # Typical ITS region is variable in length
+                'its1': 1500,    # Typical ITS1 is variable in length
+                'its2': 1500,    # Typical ITS2 is variable in length
                 'trnh-psba': 1000  # Typical trnH-psbA is ~500-700bp
             }
             
@@ -912,7 +1094,6 @@ class SequenceProcessor:
             max_size = max_gene_sizes.get(gene_name.lower(), 3000)  # Default to 3000 for unknown genes
             
         # FALLBACK 1: Check for gene feature with matching name but no CDS
-        # Move this up in priority as it's more specific than mRNA/EST check
             for feature in record.features:
                 if feature.type == "gene":
                     gene_qualifiers = feature.qualifiers.get('gene', [])
@@ -961,7 +1142,7 @@ class SequenceProcessor:
                         except Exception as e:
                             logger.error(f"Gene region extraction error for {record.id}: {e}")
         
-        # FALLBACK 2: Check if this is an mRNA sequence with no CDS feature
+        # FALLBACK 2: Check if it is an mRNA sequence with no CDS feature
             mol_type = ""
             for feature in record.features:
                 if feature.type == "source" and "mol_type" in feature.qualifiers:
@@ -1010,7 +1191,7 @@ class SequenceProcessor:
                         logger.warning(f"Partial sequence too short ({len(record.seq)} bp < {min_size} bp) (accession {record.id})")
         
         # FALLBACK 4: For all records, check if the target gene is in the organism name or sequence ID
-        # This is a last resort when we're in single mode and desperate for more sequences
+        # This is a last resort when in single-taxid mode and are desperate for more sequences
             org_name = ""
             for feature in record.features:
                 if feature.type == "source" and "organism" in feature.qualifiers:
@@ -1034,12 +1215,8 @@ class SequenceProcessor:
             logger.debug(f"No valid CDS or fallback found for gene {gene_name} (accession {record.id})")
             return None
 
+    # Parse complex coded_by expressions, including complement() and join() statements
     def parse_coded_by(self, coded_by: str) -> Tuple[Optional[List[Tuple[str, Optional[Tuple[int, int]]]]], bool]:
-        """
-        Parse complex coded_by expressions including complement() and join() statements.
-        Returns a tuple of (segments, is_complement) where segments is a list of (accession, coordinates) 
-        tuples to handle split sequences, and is_complement indicates if sequence should be reverse complemented.
-        """
         logger.info(f"Parsing coded_by qualifier: {coded_by}")
         try:
             # Determine if complement first
@@ -1151,13 +1328,10 @@ class SequenceProcessor:
             logger.error("Full error details:", exc_info=True)
             return None, False
     
+	# Fetch nucleotide sequence corresponding to a protein record, handling both RefSeq coded_by qualifiers and UniProt xrefs.
     def fetch_nucleotide_from_protein(self, protein_record: SeqRecord, gene_name: str) -> Optional[SeqRecord]:
-       """
-       Fetch nucleotide sequence corresponding to a protein record.
-       Handles both RefSeq coded_by qualifiers and UniProt xrefs.
-       """
        try:
-           logger.info(f"Attempting to fetch nucleotide sequence for protein record {protein_record.id}")
+           logger.info(f"Attempting to fetch nucleotide sequence from protein record {protein_record.id}")
            
            # Try coded_by qualifier for RefSeq records
            cds_feature = next((f for f in protein_record.features if f.type == "CDS"), None)
@@ -1221,17 +1395,15 @@ class SequenceProcessor:
            logger.error("Full error details:", exc_info=True)
            return None
 
+    # Fetch taxonomy information for a given taxid
     @enhanced_retry((HTTPError, RuntimeError, IOError, IncompleteRead), tries=5, initial_delay=15)
     def fetch_taxonomy(self, taxid: str) -> Tuple[List[str], Dict[str, str], str, Dict[str, str]]:
-        """
-        Fetch taxonomy information for a given TaxID.
-        """
         logger.info(f"Fetching taxonomy for TaxID: {taxid}")
         
         # First verify taxid format
         taxid = taxid.strip()
         if not taxid.isdigit():
-            logger.error(f"Invalid TaxID format: {taxid} (must be numerical)")
+            logger.error(f"Invalid Tax ID format: {taxid} (must be numerical)")
             return [], {}, "", {}
 
         # Add initial delay to help avoid rate limiting
@@ -1254,6 +1426,7 @@ class SequenceProcessor:
                     records = Entrez.read(handle)
                     handle.close()
                     break  # If successful, exit retry loop
+					# Deal with spurious HTTP 400 errors
                 except HTTPError as e:
                     if e.code == 400:
                         if attempt < max_retries - 1:  # If not the last attempt
@@ -1266,7 +1439,7 @@ class SequenceProcessor:
                             return [], {}, "", {}
                     else:
                         raise  # Re-raise other HTTP errors
-            else:  # If we exhaust all retries
+            else:  # If all retries exhausted
                 return [], {}, "", {}
 
             if not records:
@@ -1308,7 +1481,7 @@ class SequenceProcessor:
                 rank_info[current_name] = current_rank
                 taxid_info[current_name] = taxid
                 
-            logger.info(f"Successfully retrieved taxonomy information for {taxid}")
+            logger.info(f"Successfully retrieved NCBI taxonomy information for {taxid}")
             logger.debug(f"Lineage: {complete_lineage}")
             logger.debug(f"Rank info: {rank_info}")
             
@@ -1326,288 +1499,356 @@ class SequenceProcessor:
                 logger.error("Full error details:", exc_info=True)
             return [], {}, "", {}
 
+    # Central nucleotide & protein search function using fetched taxid
     def try_fetch_at_taxid(self, current_taxid: str, rank_name: str, taxon_name: str,                          
                         sequence_type: str, gene_name: str,
                         protein_records: List[SeqRecord],      
                         nucleotide_records: List[SeqRecord],
                         best_taxonomy: List[str],
                         best_matched_rank: Optional[str],
-                        fetch_all: bool = False) -> Tuple[bool, bool, List[str], Optional[str], List[SeqRecord], List[SeqRecord]]:
-                protein_found = False
-                nucleotide_found = False
-                
-                # Set minimum protein size for single mode
-                min_protein_size = self.config.min_protein_size_single_mode if fetch_all else 0
-                
+                        fetch_all: bool = False,
+                        progress_counters: Optional[Dict[str, int]] = None) -> Tuple[bool, bool, List[str], Optional[str], List[SeqRecord], List[SeqRecord]]:
+        protein_found = False
+        nucleotide_found = False
+        
+        # Initialise progress tracking if provided
+        sequence_counter = progress_counters.get('sequence_counter', 0) if progress_counters else 0
+        max_sequences = progress_counters.get('max_sequences', None) if progress_counters else None
+        
+        # Set minimum protein size for single mode
+        min_protein_size = self.config.min_protein_size_single_mode if fetch_all else 0
+        
+        try:
+            # Handle protein search for 'protein' or 'both' types
+            if sequence_type in ['protein', 'both'] and (not protein_records or fetch_all):
+                # Modify search string based on fetch_all mode
+                if fetch_all and self.config.protein_length_threshold <= 0:
+                    # No size filtering when fetch_all is True and threshold is 0 or negative
+                    protein_search = f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp]"
+                else:
+                    protein_search = (f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp] "
+                                    f"AND {self.config.protein_length_threshold}:10000[SLEN]")
+                                                         
+                logger.info(f"Searching protein database at rank {rank_name} ({taxon_name}) with term: {protein_search}")
+                                    
                 try:
-                    # Handle protein search for 'protein' or 'both' types
-                    if sequence_type in ['protein', 'both'] and (not protein_records or fetch_all):
-                        # Modify search string based on fetch_all mode
-                        if fetch_all:
-                            protein_search = f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp]"
-                        else:
-                            protein_search = (f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp] "
-                                            f"AND {self.config.protein_length_threshold}:10000[SLEN]")
-                                                             
-                        logger.info(f"Searching protein database at rank {rank_name} ({taxon_name}) with term: {protein_search}")
-                                        
-                        try:
-                            protein_results = self.entrez.search(db="protein", term=protein_search)
-                            if protein_results and protein_results.get("IdList"):
-                                id_list = protein_results.get("IdList")
-                                logger.info(f"Found {len(id_list)} protein IDs")
-                                if len(id_list) > 5:  # Only log IDs if there are not too many
-                                    logger.debug(f"Protein IDs: {id_list}")
+                    protein_results = self.entrez.search(db="protein", term=protein_search)
+                    if protein_results and protein_results.get("IdList"):
+                        id_list = protein_results.get("IdList")
+                        logger.info(f"Found {len(id_list)} protein records")
+                        if len(id_list) > 5:  # Only log IDs if there are not too many
+                            logger.info(f"Protein IDs: {id_list}")
+                        
+                        # For non-fetch_all mode, apply prefiltering if there are many IDs
+                        processed_ids = id_list
+                        if not fetch_all and len(id_list) > 10:
+                            logger.info(f"Prefiltering {len(id_list)} proteins based on length information")
+                            
+                            # Get summaries and sort by length
+                            try:
+                                sorted_summaries = []
+                                batch_size = 200
                                 
-                                # For non-fetch_all mode, apply prefiltering if there are many IDs
-                                processed_ids = id_list
-                                if not fetch_all and len(id_list) > 10:
-                                    logger.info(f"Prefiltering {len(id_list)} proteins based on length information")
+                                for i in range(0, len(id_list), batch_size):
+                                    batch_ids = id_list[i:i+batch_size]
+                                    id_string = ','.join(batch_ids)
                                     
-                                    # Get summaries and sort by length
+                                    logger.debug(f"Fetching summary for batch of {len(batch_ids)} IDs")
                                     try:
-                                        sorted_summaries = []
-                                        batch_size = 200
-                                        
-                                        for i in range(0, len(id_list), batch_size):
-                                            batch_ids = id_list[i:i+batch_size]
-                                            id_string = ','.join(batch_ids)
-                                            
-                                            logger.debug(f"Fetching summary for batch of {len(batch_ids)} IDs")
-                                            try:
-                                                handle = Entrez.esummary(db="protein", id=id_string)
-                                                batch_summaries = Entrez.read(handle)
-                                                handle.close()
-                                                
-                                                # Extract sequence lengths from summaries
-                                                for summary in batch_summaries:
-                                                    seq_id = summary.get('Id', '')
-                                                    seq_length = int(summary.get('Length', 0))
-                                                    sorted_summaries.append((seq_id, seq_length))
-                                                
-                                                # Add delay between batches
-                                                if i + batch_size < len(id_list):
-                                                    sleep(uniform(0.5, 1.0))
-                                            except Exception as batch_e:
-                                                logger.error(f"Error in batch summary fetch: {batch_e}")
-                                                continue
-                                        
-                                        # Check if we got any summaries
-                                        if not sorted_summaries:
-                                            logger.error("Failed to fetch any sequence summaries, using all IDs")
-                                        else:
-                                            # Sort by length (descending)
-                                            sorted_summaries.sort(key=lambda x: x[1], reverse=True)
-                                            
-                                            # Take only top 50 IDs by sequence length
-                                            processed_ids = [item[0] for item in sorted_summaries[:10]]
-                                            logger.info(f"Successfully filtered to top 10 proteins by length (longest: {sorted_summaries[0][1]} aa)")
-                                        
-                                    except Exception as e:
-                                        logger.error(f"Error in prefiltering: {e}")
-                                        logger.error("Full error details:", exc_info=True)
-                                        logger.warning("Using all IDs without length filtering")
-                                
-                                # Log how many IDs we're processing
-                                logger.info(f"Processing {len(processed_ids)} protein IDs")
-                                
-                                # Process the filtered or complete ID list
-                                for protein_id in processed_ids:
-                                    # Add logging for protein fetch attempt
-                                    logger.info(f"Attempting to fetch protein sequence for {gene_name} (accession {protein_id})")
-                                    
-                                    handle = self.entrez.fetch(db="protein", id=protein_id,
-                                                             rettype="gb", retmode="text")
-                                    if handle:
-                                        temp_record = next(SeqIO.parse(handle, "genbank"))
+                                        handle = Entrez.esummary(db="protein", id=id_string)
+                                        batch_summaries = Entrez.read(handle)
                                         handle.close()
                                         
-                                        # Add logging for successful protein fetch
-                                        logger.info(f"Successfully fetched protein sequence of length {len(temp_record.seq)} (accession {temp_record.id})")
+                                        # Extract sequence lengths from summaries
+                                        for summary in batch_summaries:
+                                            seq_id = summary.get('Id', '')
+                                            seq_length = int(summary.get('Length', 0))
+                                            sorted_summaries.append((seq_id, seq_length))
+                                        
+                                        # Add delay between batches
+                                        if i + batch_size < len(id_list):
+                                            sleep(uniform(0.5, 1.0))
+                                    except Exception as batch_e:
+                                        logger.error(f"Error in batch summary fetch: {batch_e}")
+                                        continue
+                                
+                                # Check if any summaries retrieved
+                                if not sorted_summaries:
+                                    logger.error("Failed to fetch any sequence summaries, using all IDs")
+                                else:
+                                    # Sort by length (descending)
+                                    sorted_summaries.sort(key=lambda x: x[1], reverse=True)
+                                    
+                                    # Take only top 10 IDs by sequence length
+                                    processed_ids = [item[0] for item in sorted_summaries[:10]]
+                                    logger.info(f"Successfully filtered to top 10 proteins by length (longest: {sorted_summaries[0][1]} aa)")
+                                
+                            except Exception as e:
+                                logger.error(f"Error in prefiltering: {e}")
+                                logger.error("Full error details:", exc_info=True)
+                                logger.warning("Using all IDs without length filtering")
+                        
+                        # Log how many IDs are processed
+                        logger.info(f"Processing {len(processed_ids)} protein record")
+                        
+                        # Process the filtered or complete ID list
+                        for protein_id in processed_ids:
+                            # Check if reached the max_sequences limit
+                            if max_sequences and sequence_counter >= max_sequences:
+                                logger.info(f"Reached maximum sequence limit ({max_sequences}). Stopping search.")
+                                break
+                                
+                            # Add logging for protein fetch attempt
+                            logger.info(f"Attempting to fetch protein sequence for {gene_name} (GI:{protein_id})")
+                            
+                            handle = self.entrez.fetch(db="protein", id=protein_id,
+                                                     rettype="gb", retmode="text")
+                            if handle:
+                                temp_record = next(SeqIO.parse(handle, "genbank"))
+                                handle.close()
+                                
+                                # Add logging for successful protein fetch
+                                logger.info(f"Successfully fetched protein sequence of length {len(temp_record.seq)} (accession {temp_record.id})")
 
-                                        # Only skip UniProt records in non-single mode
-                                        if not fetch_all:
-                                            # Skip problematic UniProt/Swiss-Prot protein accession numbers
-                                            if re.match(r'^[A-Z]\d+', temp_record.id) and not re.match(r'^[A-Z]{2,}', temp_record.id):
-                                                logger.info(f"Skipping UniProtKB/Swiss-Prot protein record {temp_record.id}")
-                                                continue
+                                # Only skip UniProt records in non-single mode
+                                if not fetch_all:
+                                    # Skip problematic UniProt/Swiss-Prot protein accession numbers
+                                    if re.match(r'^[A-Z]\d+', temp_record.id) and not re.match(r'^[A-Z]{2,}', temp_record.id):
+                                        logger.info(f"Skipping UniProtKB/Swiss-Prot protein record {temp_record.id}")
+                                        continue
+                                
+                                # Check minimum protein size in single mode
+                                if fetch_all and len(temp_record.seq) < min_protein_size:
+                                    logger.warning(f"Protein sequence too short ({len(temp_record.seq)} aa < {min_protein_size} aa) - skipping (accession {temp_record.id})")
+                                    continue
+                                
+                                if fetch_all:
+                                    protein_records.append(temp_record)
+                                    protein_found = True
+                                    if not best_taxonomy:
+                                        best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                    
+                                    # Update counter and log progress
+                                    sequence_counter += 1
+                                    if progress_counters:
+                                        progress_counters['sequence_counter'] = sequence_counter
+                                    
+                                    # Log progress
+                                    if max_sequences:
+                                        logger.info(f"Progress: {sequence_counter}/{max_sequences} sequences processed")
+                                    else:
+                                        # If max_sequences is None, use the total found sequences
+                                        total_found = len(id_list)
+                                        logger.info(f"Progress: {sequence_counter}/{total_found} sequences processed")
+                                else:
+                                    # Keep only longest sequence
+                                    if not protein_records or len(temp_record.seq) > len(protein_records[0].seq):
+                                        protein_records.clear()
+                                        protein_records.append(temp_record)
+                                        protein_found = True
+                                        best_taxonomy = temp_record.annotations.get("taxonomy", [])
+
+                            # For normal mode (--type both), try to fetch corresponding nucleotide
+                            if protein_found and not fetch_all and sequence_type == 'both':
+                                nucleotide_record = self.fetch_nucleotide_from_protein(protein_records[0], gene_name)
+                                if nucleotide_record:
+                                    nucleotide_records.clear()
+                                    nucleotide_records.append(nucleotide_record)
+                                    nucleotide_found = True
+                                    logger.info(f"Successfully fetched corresponding nucleotide sequence")
+                                else:
+                                    logger.warning("Failed to fetch corresponding nucleotide sequence")
+                                    protein_records.clear()
+                                    protein_found = False
                                         
-                                        # Check minimum protein size in single mode
-                                        if fetch_all and len(temp_record.seq) < min_protein_size:
-                                            logger.warning(f"Protein sequence too short ({len(temp_record.seq)} aa < {min_protein_size} aa) - skipping (accession {temp_record.id})")
-                                            continue
+                except Exception as e:
+                    logger.error(f"Error searching protein database: {e}")
+
+            # Handle nucleotide search
+            if ((sequence_type == 'nucleotide') or 
+                (sequence_type == 'both' and fetch_all) or  # Single taxid mode
+                (sequence_type == 'both' and not nucleotide_found)):  # Fallback for normal mode
+                
+                # Reset counter if switching to nucleotide search in 'both' mode
+                if fetch_all and sequence_type == 'both' and protein_records:
+                    sequence_counter = 0
+                    if progress_counters:
+                        progress_counters['sequence_counter'] = sequence_counter
+                
+                # Modify search string based on fetch_all mode
+                if fetch_all:
+                    nucleotide_search = f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp]"
+                else:
+                    nucleotide_search = (f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp] "
+                                        f"AND {self.config.nucleotide_length_threshold}:30000[SLEN]")
+                                                         
+                logger.info(f"Searching nucleotide database at rank {rank_name} ({taxon_name}) with term: {nucleotide_search}")
+                
+                try:
+                    nucleotide_results = self.entrez.search(db="nucleotide", term=nucleotide_search)
+                    if nucleotide_results and nucleotide_results.get("IdList"):
+                        id_list = nucleotide_results.get("IdList")
+                        logger.info(f"Found {len(id_list)} nucleotide sequence IDs")
+                        if len(id_list) > 5:  # Only log IDs if there are not too many
+                            logger.debug(f"Nucleotide IDs: {id_list}")
+
+                        # Apply the same prefiltering optimisation for nucleotide sequences
+                        processed_ids = id_list
+                        if not fetch_all and len(id_list) > 10:
+                            logger.info(f"Prefiltering {len(id_list)} nucleotide sequences based on length information")
+                            
+                            # Get summaries and sort by length
+                            try:
+                                sorted_summaries = []
+                                batch_size = 200 # Fetch in batches of 200
+                                
+                                for i in range(0, len(id_list), batch_size):
+                                    batch_ids = id_list[i:i+batch_size]
+                                    id_string = ','.join(batch_ids)
+                                    
+                                    logger.debug(f"Fetching summary for batch of {len(batch_ids)} IDs")
+                                    try:
+                                        handle = Entrez.esummary(db="nucleotide", id=id_string)
+                                        batch_summaries = Entrez.read(handle)
+                                        handle.close()
                                         
+                                        # Extract sequence lengths from summaries
+                                        for summary in batch_summaries:
+                                            seq_id = summary.get('Id', '')
+                                            seq_length = int(summary.get('Length', 0))
+                                            sorted_summaries.append((seq_id, seq_length))
+                                        
+                                        # Add delay between batches
+                                        if i + batch_size < len(id_list):
+                                            sleep(uniform(0.5, 1.0))
+                                    except Exception as batch_e:
+                                        logger.error(f"Error in batch summary fetch: {batch_e}")
+                                        continue
+                                
+                                # Check if any summaries retrieved
+                                if not sorted_summaries:
+                                    logger.error("Failed to fetch any sequence summaries, using all IDs")
+                                else:
+                                    # Sort by length (descending)
+                                    sorted_summaries.sort(key=lambda x: x[1], reverse=True)
+                                    
+                                    # Take only top 10 IDs by sequence length
+                                    processed_ids = [item[0] for item in sorted_summaries[:10]]
+                                    logger.info(f"Successfully filtered to top 10 nucleotide sequences by length (longest: {sorted_summaries[0][1]} bp)")
+                                
+                            except Exception as e:
+                                logger.error(f"Error in nucleotide prefiltering: {e}")
+                                logger.error("Full error details:", exc_info=True)
+                                logger.warning("Using all IDs without length filtering")
+                        
+                        # Log how many IDs are processed
+                        logger.info(f"Processing {len(processed_ids)} nucleotide IDs")
+
+                        for seq_id in processed_ids:
+                            # Check if reached the max_sequences limit
+                            if max_sequences and sequence_counter >= max_sequences:
+                                logger.info(f"Reached maximum sequence limit ({max_sequences}). Stopping search.")
+                                break
+                                
+                            try:
+                                logger.info(f"Attempting to fetch nucleotide sequence (GI:{seq_id})")
+                                temp_record = self.fetch_nucleotide_record(seq_id)
+                                
+                                if temp_record:
+                                    logger.info(f"Successfully fetched nucleotide sequence of length {len(temp_record.seq)} (accession {temp_record.id})")
+                                    
+                                    if gene_name not in self.config._protein_coding_genes:
+                                        # For rRNA genes, use full sequence
                                         if fetch_all:
-                                            protein_records.append(temp_record)
-                                            protein_found = True
+                                            nucleotide_records.append(temp_record)
+                                            nucleotide_found = True
                                             if not best_taxonomy:
                                                 best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                                
+                                            # Update counter and log progress
+                                            sequence_counter += 1
+                                            if progress_counters:
+                                                progress_counters['sequence_counter'] = sequence_counter
+                                            
+                                            # Log progress
+                                            if max_sequences:
+                                                logger.info(f"Progress: {sequence_counter}/{max_sequences} sequences processed")
+                                            else:
+                                                # If max_sequences is None, use the total found sequences
+                                                total_found = len(id_list)
+                                                logger.info(f"Progress: {sequence_counter}/{total_found} sequences processed")
                                         else:
                                             # Keep only longest sequence
-                                            if not protein_records or len(temp_record.seq) > len(protein_records[0].seq):
-                                                protein_records.clear()
-                                                protein_records.append(temp_record)
-                                                protein_found = True
+                                            if not nucleotide_records or len(temp_record.seq) > len(nucleotide_records[0].seq):
+                                                nucleotide_records.clear()
+                                                nucleotide_records.append(temp_record)
+                                                nucleotide_found = True
                                                 best_taxonomy = temp_record.annotations.get("taxonomy", [])
-
-                                    # For normal mode (--type both), try to fetch corresponding nucleotide
-                                    if protein_found and not fetch_all and sequence_type == 'both':
-                                        nucleotide_record = self.fetch_nucleotide_from_protein(protein_records[0], gene_name)
-                                        if nucleotide_record:
-                                            nucleotide_records.clear()
-                                            nucleotide_records.append(nucleotide_record)
-                                            nucleotide_found = True
-                                            logger.info(f"Successfully fetched corresponding nucleotide sequence")
-                                        else:
-                                            logger.warning("Failed to fetch corresponding nucleotide sequence")
-                                            protein_records.clear()
-                                            protein_found = False
+                                    else:
+                                        # For protein-coding genes, extract CDS
+                                        logger.info(f"Attempting to extract CDS from nucleotide sequence (accession {temp_record.id})")
+                                        cds_record = self.extract_nucleotide(temp_record, gene_name, fetch_all)
+                                        if cds_record:
+                                            logger.info(f"Using extracted CDS in search results (accession {temp_record.id})")
+                                            if fetch_all:
+                                                nucleotide_records.append(cds_record)
+                                                nucleotide_found = True
+                                                if not best_taxonomy:
+                                                    best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                                    
+                                                # Update counter and log progress
+                                                sequence_counter += 1
+                                                if progress_counters:
+                                                    progress_counters['sequence_counter'] = sequence_counter
                                                 
-                        except Exception as e:
-                            logger.error(f"Error searching protein database: {e}")
-
-                    # Handle nucleotide search
-                    if ((sequence_type == 'nucleotide') or 
-                        (sequence_type == 'both' and fetch_all) or  # Single taxid mode
-                        (sequence_type == 'both' and not nucleotide_found)):  # Fallback for normal mode
-                        
-                        # Modify search string based on fetch_all mode
-                        if fetch_all:
-                            nucleotide_search = f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp]"
-                        else:
-                            nucleotide_search = (f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp] "
-                                                f"AND {self.config.nucleotide_length_threshold}:30000[SLEN]")
-                                                                 
-                        logger.info(f"Searching nucleotide database at rank {rank_name} ({taxon_name}) with term: {nucleotide_search}")
-                        
-                        try:
-                            nucleotide_results = self.entrez.search(db="nucleotide", term=nucleotide_search)
-                            if nucleotide_results and nucleotide_results.get("IdList"):
-                                id_list = nucleotide_results.get("IdList")
-                                logger.info(f"Found {len(id_list)} nucleotide sequence IDs")
-                                if len(id_list) > 5:  # Only log IDs if there are not too many
-                                    logger.debug(f"Nucleotide IDs: {id_list}")
-
-                                # Apply the same prefiltering optimization for nucleotide sequences
-                                processed_ids = id_list
-                                if not fetch_all and len(id_list) > 10:
-                                    logger.info(f"Prefiltering {len(id_list)} nucleotide sequences based on length information")
-                                    
-                                    # Get summaries and sort by length
-                                    try:
-                                        sorted_summaries = []
-                                        batch_size = 200
-                                        
-                                        for i in range(0, len(id_list), batch_size):
-                                            batch_ids = id_list[i:i+batch_size]
-                                            id_string = ','.join(batch_ids)
-                                            
-                                            logger.debug(f"Fetching summary for batch of {len(batch_ids)} IDs")
-                                            try:
-                                                handle = Entrez.esummary(db="nucleotide", id=id_string)
-                                                batch_summaries = Entrez.read(handle)
-                                                handle.close()
-                                                
-                                                # Extract sequence lengths from summaries
-                                                for summary in batch_summaries:
-                                                    seq_id = summary.get('Id', '')
-                                                    seq_length = int(summary.get('Length', 0))
-                                                    sorted_summaries.append((seq_id, seq_length))
-                                                
-                                                # Add delay between batches
-                                                if i + batch_size < len(id_list):
-                                                    sleep(uniform(0.5, 1.0))
-                                            except Exception as batch_e:
-                                                logger.error(f"Error in batch summary fetch: {batch_e}")
-                                                continue
-                                        
-                                        # Check if we got any summaries
-                                        if not sorted_summaries:
-                                            logger.error("Failed to fetch any sequence summaries, using all IDs")
-                                        else:
-                                            # Sort by length (descending)
-                                            sorted_summaries.sort(key=lambda x: x[1], reverse=True)
-                                            
-                                            # Take only top 50 IDs by sequence length
-                                            processed_ids = [item[0] for item in sorted_summaries[:10]]
-                                            logger.info(f"Successfully filtered to top 10 nucleotide sequences by length (longest: {sorted_summaries[0][1]} bp)")
-                                        
-                                    except Exception as e:
-                                        logger.error(f"Error in nucleotide prefiltering: {e}")
-                                        logger.error("Full error details:", exc_info=True)
-                                        logger.warning("Using all IDs without length filtering")
-                                
-                                # Log how many IDs we're processing
-                                logger.info(f"Processing {len(processed_ids)} nucleotide IDs")
-
-                                for seq_id in processed_ids:
-                                    try:
-                                        logger.info(f"Attempting to fetch nucleotide sequence (accession {seq_id})")
-                                        temp_record = self.fetch_nucleotide_record(seq_id)
-                                        
-                                        if temp_record:
-                                            logger.info(f"Successfully fetched nucleotide sequence of length {len(temp_record.seq)} (accession {temp_record.id})")
-                                            
-                                            if gene_name not in self.config._protein_coding_genes:
-                                                # For rRNA genes, use full sequence
-                                                if fetch_all:
-                                                    nucleotide_records.append(temp_record)
-                                                    nucleotide_found = True
-                                                    if not best_taxonomy:
-                                                        best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                                # Log progress
+                                                if max_sequences:
+                                                    logger.info(f"Progress: {sequence_counter}/{max_sequences} sequences processed")
                                                 else:
-                                                    # Keep only longest sequence
-                                                    if not nucleotide_records or len(temp_record.seq) > len(nucleotide_records[0].seq):
-                                                        nucleotide_records.clear()
-                                                        nucleotide_records.append(temp_record)
-                                                        nucleotide_found = True
-                                                        best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                                    # If max_sequences is None, use the total found sequences
+                                                    total_found = len(id_list)
+                                                    logger.info(f"Progress: {sequence_counter}/{total_found} sequences processed")
                                             else:
-                                                # For protein-coding genes, extract CDS
-                                                logger.info(f"Attempting to extract CDS from nucleotide sequence (accession {temp_record.id})")
-                                                cds_record = self.extract_nucleotide(temp_record, gene_name, fetch_all)
-                                                if cds_record:
-                                                    logger.info(f"Successfully extracted CDS of length {len(cds_record.seq)} (accession {temp_record.id})")
-                                                    if fetch_all:
-                                                        nucleotide_records.append(cds_record)
-                                                        nucleotide_found = True
-                                                        if not best_taxonomy:
-                                                            best_taxonomy = temp_record.annotations.get("taxonomy", [])
-                                                    else:
-                                                        # Keep only longest CDS
-                                                        if not nucleotide_records or len(cds_record.seq) > len(nucleotide_records[0].seq):
-                                                            nucleotide_records.clear()
-                                                            nucleotide_records.append(cds_record)
-                                                            nucleotide_found = True
-                                                            best_taxonomy = temp_record.annotations.get("taxonomy", [])
-                                                else:
-                                                    logger.warning(f"Failed to extract CDS from nucleotide sequence (accession {temp_record.id})")
+                                                # Keep only longest CDS
+                                                if not nucleotide_records or len(cds_record.seq) > len(nucleotide_records[0].seq):
+                                                    nucleotide_records.clear()
+                                                    nucleotide_records.append(cds_record)
+                                                    nucleotide_found = True
+                                                    best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                        else:
+                                            logger.warning(f"Failed to extract CDS from nucleotide sequence (accession {temp_record.id})")
 
-                                    except Exception as e:
-                                        logger.error(f"Error processing sequence {seq_id}: {e}")
-                                        continue
-                        except Exception as e:
-                            logger.error(f"Error searching nucleotide database: {e}")
-                            nucleotide_results = None
-
-                    if protein_found or nucleotide_found:
-                        current_match = f"{rank_name}:{taxon_name}" if rank_name else f"exact match:{taxon_name}"
-                        if not best_matched_rank or (rank_name and not best_matched_rank.startswith("exact")):
-                            best_matched_rank = current_match
-
+                            except Exception as e:
+                                logger.error(f"Error processing sequence {seq_id}: {e}")
+                                continue
                 except Exception as e:
-                    logger.error(f"Error in try_fetch_at_taxid for taxid {current_taxid}: {e}")
-                    logger.error("Full error details:", exc_info=True)
+                    logger.error(f"Error searching nucleotide database: {e}")
+                    nucleotide_results = None
 
-                return protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_records, nucleotide_records
+            if protein_found or nucleotide_found:
+                current_match = f"{rank_name}:{taxon_name}" if rank_name else f"exact match:{taxon_name}"
+                if not best_matched_rank or (rank_name and not best_matched_rank.startswith("exact")):
+                    best_matched_rank = current_match
 
-    def search_and_fetch_sequences(self, taxid: str, gene_name: str, sequence_type: str, fetch_all: bool = False) -> Tuple[List[SeqRecord], List[SeqRecord], List[str], str]:  
+        except Exception as e:
+            logger.error(f"Error in try_fetch_at_taxid for taxid {current_taxid}: {e}")
+            logger.error("Full error details:", exc_info=True)
+
+        return protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_records, nucleotide_records
+
+    # Handles taxonomy traversal (i.e. taxonomy walking) for target sequence searches
+    def search_and_fetch_sequences(self, taxid: str, gene_name: str, sequence_type: str, fetch_all: bool = False, 
+                                  progress_counters: Optional[Dict[str, int]] = None) -> Tuple[List[SeqRecord], List[SeqRecord], List[str], str]:  
         # Initialise empty lists for records
         protein_records = []
         nucleotide_records = []
         best_taxonomy = []
         best_matched_rank = None
-
+        
+        # Initialize progress tracking if provided
+        sequence_counter = 0
+        max_sequences = progress_counters.get('max_sequences', None) if progress_counters else None
+        
         # Fetch taxonomy first
         taxonomy, taxon_ranks, initial_rank, taxon_ids = self.fetch_taxonomy(taxid)
         if not taxonomy:
@@ -1630,30 +1871,41 @@ class SequenceProcessor:
                     sequence_type, gene_name,
                     protein_records, nucleotide_records,
                     best_taxonomy, best_matched_rank,
-                    fetch_all
+                    fetch_all, progress_counters
                 )
 
-            # For single taxid mode with fetch_all, we only search at the exact taxid level
+            # For single-taxid mode with fetch_all, only search at the exact taxid level
             if fetch_all:
                 break
 
-            # For normal mode, continue searching up taxonomy if needed
+            # For normal mode, continue searching up taxonomy if needed for different sequence 'types'
+            found_required_sequences = False
             if sequence_type == 'both':
-                if protein_records and nucleotide_records:  # Need both in normal mode
-                    break
-            elif sequence_type == 'protein' and protein_records:
+                found_required_sequences = protein_records and nucleotide_records
+            elif sequence_type == 'protein':
+                found_required_sequences = bool(protein_records)
+            elif sequence_type == 'nucleotide':
+                found_required_sequences = bool(nucleotide_records)
+                
+            if found_required_sequences:
                 break
-            elif sequence_type == 'nucleotide' and nucleotide_records:
-                break
-
-            # Stop if we've gone too high in taxonomy or no more levels
+                
+            # Log and continue up taxonomy if not found
+            logger.info(f"No sequences found at {current_rank} level ({current_taxon}), traversing up taxonomy")
+            
+            # Stop if no more levels or rank is too high
             if (current_rank in ['class', 'subphylum', 'phylum', 'kingdom', 'superkingdom'] or 
                 current_taxon == 'cellular organisms' or 
                 not current_taxonomy):
-                logger.info(f"Reached {current_rank} rank, stopping traversal")
+                logger.info(f"Reached {current_rank} rank, stopping taxonomic traversal")
                 break
 
             # Get next level in taxonomy
+            next_taxon = current_taxonomy[-1]
+            next_rank = taxon_ranks.get(next_taxon, 'unknown')
+            next_taxid = taxon_ids.get(next_taxon)
+            
+            # Update current variables
             current_taxon = current_taxonomy.pop()
             current_rank = taxon_ranks.get(current_taxon, 'unknown')
             current_taxid = taxon_ids.get(current_taxon)
@@ -1668,7 +1920,7 @@ class SequenceProcessor:
         
         # Different return logic based on mode
         if fetch_all:
-            # Single taxid mode: return whatever we found
+            # Single taxid mode: return what was found
             if not protein_records and not nucleotide_records:
                 logger.warning("No sequences found")
                 return [], [], [], "No match"
@@ -1688,49 +1940,15 @@ class SequenceProcessor:
 
         logger.info(f"Search completed. Matched at rank: {matched_rank}")
         return protein_records, nucleotide_records, best_taxonomy, matched_rank
-
-def process_single_taxid(taxid: str, gene_name: str, sequence_type: str,
-                        processor: SequenceProcessor, output_dir: Path) -> None:
-        """Process a single taxid, fetching all available sequences."""
-        try:
-            # Fetch all sequences
-            protein_records, nucleotide_records, taxonomy, matched_rank = processor.search_and_fetch_sequences(
-                taxid, gene_name, sequence_type, fetch_all=True)
-            if not protein_records and not nucleotide_records:
-                logger.warning(f"No sequences found for taxid {taxid}")
-                return
-            # Create output manager
-            output_manager = OutputManager(output_dir)
-            # Save protein sequences
-            if sequence_type in ['protein', 'both'] and protein_records:
-                for i, record in enumerate(protein_records):
-                    filename = f"{record.id}.fasta"
-                    output_path = output_dir / filename
-                    SeqIO.write(record, output_path, "fasta")
-                    logger.info(f"Written protein sequence {i+1}/{len(protein_records)} to '{output_path}'")
-                
-                # Use the output manager's method to save summary
-                output_manager.save_sequence_summary(protein_records, "protein")
-                logger.info(f"###############Saved summary of {len(protein_records)} protein sequences###############")
-            # Save nucleotide sequences
-            if sequence_type in ['nucleotide', 'both'] and nucleotide_records:
-                nucleotide_dir = output_dir / 'nucleotide'
-                ensure_directory(nucleotide_dir)
-                for i, record in enumerate(nucleotide_records):
-                    filename = f"{record.id}.fasta"
-                    output_path = nucleotide_dir / filename
-                    SeqIO.write(record, output_path, "fasta")
-                    logger.info(f"Written nucleotide sequence {i+1}/{len(nucleotide_records)} to '{output_path}'")
-                
-                # Use the output manager's method to save summary
-                output_manager.save_sequence_summary(nucleotide_records, "nucleotide")
-                logger.info(f"###############Saved summary of {len(nucleotide_records)} nucleotide sequences###############")
-        except Exception as e:
-            logger.error(f"Error processing taxid {taxid}: {e}")
-            logger.error("Full error details:", exc_info=True)
-
+		
+		
+		
+		
+		
+# =============================================================================
+# Output file and directory management
+# =============================================================================		
 class OutputManager:
-    """Manages output files and directories."""
     def __init__(self, output_dir: Path):
         self.output_dir = output_dir
         self.nucleotide_dir = output_dir / 'nucleotide'
@@ -1739,14 +1957,14 @@ class OutputManager:
         
         self._setup_directories()
         self._setup_files()
-        
+    
+	# Create main output directories
     def _setup_directories(self):
-        """Ensure all required directories exist."""
-        ensure_directory(self.output_dir)
-        ensure_directory(self.nucleotide_dir)
-        
+        make_out_dir(self.output_dir)
+        make_out_dir(self.nucleotide_dir)
+    
+	# Initialise output csv files and ehaders
     def _setup_files(self):
-        """Initialise required files if they don't exist."""
         if not self.failed_searches_path.exists():
             with open(self.failed_searches_path, 'w', newline='') as f:
                 writer = csv.writer(f)
@@ -1762,15 +1980,15 @@ class OutputManager:
                     'nucleotide_reference_path'
                 ])
 
+    # Log any failed sequence searches in csv
     def log_failure(self, process_id: str, taxid: str, error_type: str):
-        """Log failed searches."""
         with open(self.failed_searches_path, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([process_id, taxid, error_type, 
                            time.strftime("%Y-%m-%d %H:%M:%S")])
 
+    # Write fetched sequence metadata to main output csv 
     def write_sequence_reference(self, data: Dict[str, Any]):
-        """Write sequence reference information."""
         with open(self.sequence_refs_path, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
@@ -1786,14 +2004,8 @@ class OutputManager:
                 data.get('nucleotide_path', '')
             ])
 
+    # Creates nucleotide and/or protein csv outputs for single-taxid mode
     def save_sequence_summary(self, sequences: List[SeqRecord], file_type: str):
-        """
-        Save summary of sequences to CSV file.
-        
-        Args:
-            sequences: List of sequence records
-            file_type: Either 'protein' or 'nucleotide'
-        """
         if not sequences:
             logger.info(f"No {file_type} sequences to summarize")
             return
@@ -1813,45 +2025,17 @@ class OutputManager:
                 writer.writerow([accession, length, description])
                 
         logger.info(f"Wrote {file_type} sequence summary to {file_path}")
-
-def get_process_id_column(header):
-    """Identify the process ID column from possible variations."""
-    # Debug: print what we actually see in the header
-    logger.info(f"CSV header detected: {header}")
-    
-    valid_names = ['ID', 'process_id', 'Process ID', 'process id', 'Process id', 
-                  'PROCESS ID', 'sample', 'SAMPLE', 'Sample']
-    
-    # Debug: print repr of each header item to see invisible characters
-    for i, col in enumerate(header):
-        logger.info(f"Header column {i}: {repr(col)}")
-    
-    # Try direct comparison first
-    for col in header:
-        if col in valid_names:
-            logger.info(f"Found matching column: {col}")
-            return col
-    
-    # Try trimming whitespace (in case of spaces)
-    for col in header:
-        trimmed = col.strip()
-        if trimmed in valid_names:
-            logger.info(f"Found matching column after trimming: {trimmed}")
-            return col
-    
-    # Last resort: try case-insensitive comparison
-    for col in header:
-        if col.upper() in [name.upper() for name in valid_names]:
-            logger.info(f"Found matching column case-insensitive: {col}")
-            return col
-    
-    logger.error(f"No matching column found in {header}")
-    return None
-
+		
+		
+		
+		
+# =============================================================================
+# Processing functions
+# =============================================================================
+# Process single sample input, retrieving and storing fetched sequences
 def process_sample(process_id: str, taxid: str, sequence_type: str, 
                   processor: SequenceProcessor, output_manager: OutputManager,
                   gene_name: str) -> None:
-    """Process a single sample."""
     try:
         # Define output paths
         protein_path = output_manager.output_dir / f"{process_id}.fasta"
@@ -1922,9 +2106,245 @@ def process_sample(process_id: str, taxid: str, sequence_type: str,
     except Exception as e:
         logger.error(f"Error processing sample {process_id}: {e}")
         output_manager.log_failure(process_id, taxid, f"Processing error: {str(e)}")
+		
 
+		
+# Process single-taxid mode input, fetching all or N available sequences
+def process_single_taxid(taxid: str, gene_name: str, sequence_type: str,
+                      processor: SequenceProcessor, output_dir: Path,
+                      max_sequences: Optional[int] = None) -> None:
+    try:
+        # Initialise progress counters
+        progress_counters = {
+            'sequence_counter': 0,
+            'max_sequences': max_sequences
+        }
+        
+        # Fetch all sequences with progress tracking
+        protein_records, nucleotide_records, taxonomy, matched_rank = processor.search_and_fetch_sequences(
+            taxid, gene_name, sequence_type, fetch_all=True, progress_counters=progress_counters)
+            
+        if not protein_records and not nucleotide_records:
+            logger.warning(f"No sequences found for taxid {taxid}")
+            return
+            
+        # Apply maximum sequence limit if specified
+        if max_sequences is not None:
+            if sequence_type in ['protein', 'both'] and protein_records:
+                if len(protein_records) > max_sequences:
+                    logger.info(f"Limiting protein records from {len(protein_records)} to {max_sequences} as specified")
+                    protein_records = protein_records[:max_sequences]
+                    
+            if sequence_type in ['nucleotide', 'both'] and nucleotide_records:
+                if len(nucleotide_records) > max_sequences:
+                    logger.info(f"Limiting nucleotide records from {len(nucleotide_records)} to {max_sequences} as specified")
+                    nucleotide_records = nucleotide_records[:max_sequences]
+                    
+        # Create output manager
+        output_manager = OutputManager(output_dir)
+        
+        # Save protein sequences
+        if sequence_type in ['protein', 'both'] and protein_records:
+            for i, record in enumerate(protein_records):
+                filename = f"{record.id}.fasta"
+                output_path = output_dir / filename
+                SeqIO.write(record, output_path, "fasta")
+                logger.info(f"Written protein sequence {i+1}/{len(protein_records)} to '{output_path}'")
+            
+            # Use output manager to save summary
+            output_manager.save_sequence_summary(protein_records, "protein")
+            logger.info(f"=======================================================================================")
+            logger.info(f"-----          Saved summary of {len(protein_records)} protein sequences          -----")
+            logger.info(f"=======================================================================================")
+            
+        # Save nucleotide sequences
+        if sequence_type in ['nucleotide', 'both'] and nucleotide_records:
+            nucleotide_dir = output_dir / 'nucleotide'
+            make_out_dir(nucleotide_dir)
+            for i, record in enumerate(nucleotide_records):
+                filename = f"{record.id}.fasta"
+                output_path = nucleotide_dir / filename
+                SeqIO.write(record, output_path, "fasta")
+                logger.info(f"Written nucleotide sequence {i+1}/{len(nucleotide_records)} to '{output_path}'")
+            
+            # Use output manager to save summary
+            output_manager.save_sequence_summary(nucleotide_records, "nucleotide")
+            logger.info(f"=======================================================================================")
+            logger.info(f"------      Saved summary of {len(nucleotide_records)} nucleotide sequences       -----")
+            logger.info(f"=======================================================================================")
 
+    except Exception as e:
+        logger.error(f"Error processing taxid {taxid}: {e}")
+        logger.error("Full error details:", exc_info=True)
+		
+		
+
+# Process samples.csv 
+def process_taxid_csv(csv_path, gene_name, sequence_type, processor, output_manager):
+    try:
+        samples_csv = Path(csv_path)
+        logger.info(f"Samples file: {samples_csv}")
+        
+        with open(samples_csv, newline='', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            process_id_col = get_process_id_column(reader.fieldnames)
+        
+            if not process_id_col:
+                logger.error("Could not find process ID column in input CSV.")
+                sys.exit(1)
+
+            # Count total samples
+            total_samples = sum(1 for _ in reader)
+            f.seek(0)
+            next(reader) 
+
+            # Initialise progress tracking
+            log_progress(0, total_samples)
+
+            # Process each sample
+            for i, row in enumerate(reader, 1):
+                try:
+                    taxid = row['taxid'].strip()
+                    process_id = row[process_id_col].strip()
+                    
+                    logger.info("")
+                    logger.info(f"====== Processing sample {i}/{total_samples}: {process_id} (TaxID: {taxid}) ======")
+                    
+                    process_sample(
+                        process_id=process_id,
+                        taxid=taxid,
+                        sequence_type=sequence_type,
+                        processor=processor,
+                        output_manager=output_manager,
+                        gene_name=gene_name
+                    )
+                    
+                    # Log progress
+                    log_progress(i, total_samples)
+                    
+                    # Add a small delay between samples
+                    sleep(uniform(0.5, 1.0))
+                    
+                except Exception as e:
+                    logger.error(f"Error processing row {i}: {e}")
+                    continue
+
+            # Log final progress
+            log_progress(total_samples, total_samples)
+
+    except Exception as e:
+        logger.error(f"Fatal error processing taxid CSV: {e}")
+        sys.exit(1)
+		
+		
+
+# Process samples_taxonomy.csv
+def process_taxonomy_csv(csv_path, gene_name, sequence_type, processor, output_manager, entrez):
+    try:
+        taxonomy_csv = Path(csv_path)
+        logger.info(f"Samples file: {taxonomy_csv}")
+        
+        # Read in csv file
+        with open(taxonomy_csv, 'r', newline='', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            
+            # Check for required columns
+            required_columns = ['ID', 'genus', 'species']
+            missing_columns = [col for col in required_columns if col.lower() not in [field.lower() for field in reader.fieldnames]]
+            if missing_columns:
+                logger.error(f"Missing required columns in taxonomy CSV: {missing_columns}")
+                logger.error(f"CSV must contain at least 'ID', 'genus', and 'species' columns")
+                sys.exit(1)
+            
+            # Map actual column names to expected column names (case-insensitive)
+            column_map = {}
+            for expected_col in ['ID', 'phylum', 'class', 'order', 'family', 'genus', 'species']:
+                for actual_col in reader.fieldnames:
+                    if actual_col.lower() == expected_col.lower():
+                        column_map[expected_col] = actual_col
+            
+            # Get ID column
+            process_id_col = get_process_id_column(reader.fieldnames)
+            if not process_id_col:
+                if 'ID' in column_map:
+                    process_id_col = column_map['ID']
+                else:
+                    logger.error("Could not find process ID column in input CSV.")
+                    sys.exit(1)
+            
+            # Count total samples
+            total_samples = sum(1 for _ in reader)
+            f.seek(0)
+            next(reader)  # Skip header
+            
+            # Initialise progress tracking
+            log_progress(0, total_samples)
+            
+            # Process each sample
+            for i, row in enumerate(reader, 1):
+                try:
+                    process_id = row[process_id_col].strip()
+                    
+                    logger.info("")
+                    logger.info(f"====== Processing sample {i}/{total_samples}: {process_id} ======")
+                    
+                    # Extract taxonomic information
+                    phylum = row.get(column_map.get('phylum', ''), '').strip() if 'phylum' in column_map else ''
+                    class_name = row.get(column_map.get('class', ''), '').strip() if 'class' in column_map else ''
+                    order = row.get(column_map.get('order', ''), '').strip() if 'order' in column_map else ''
+                    family = row.get(column_map.get('family', ''), '').strip() if 'family' in column_map else ''
+                    genus = row.get(column_map.get('genus', ''), '').strip() if 'genus' in column_map else ''
+                    species = row.get(column_map.get('species', ''), '').strip() if 'species' in column_map else ''
+                    
+                    # Validate required fields
+                    if not genus or not species:
+                        logger.warning(f"Missing required genus or species for {process_id}")
+                        output_manager.log_failure(process_id, "unknown", "Missing required taxonomy fields")
+                        continue
+                    
+                    # Fetch taxid from taxonomic information
+                    taxid = entrez.fetch_taxid_from_taxonomy(phylum, class_name, order, family, genus, species)
+                    
+                    if not taxid:
+                        logger.warning(f"Could not resolve taxid for {process_id} ({genus} {species})")
+                        output_manager.log_failure(process_id, "unknown", "Could not resolve taxid")
+                        continue
+                    
+                    logger.info(f"Resolved taxid {taxid} for {process_id} ({genus} {species})")
+                    
+                    # Process the sample with resolved taxid
+                    process_sample(
+                        process_id=process_id,
+                        taxid=taxid,
+                        sequence_type=sequence_type,
+                        processor=processor,
+                        output_manager=output_manager,
+                        gene_name=gene_name
+                    )
+                    
+                    # Log progress
+                    log_progress(i, total_samples)
+                    
+                    # Add a small delay between samples
+                    sleep(uniform(0.5, 1.0))
+                    
+                except Exception as e:
+                    logger.error(f"Error processing row {i}: {e}")
+                    continue
+                
+            # Log final progress
+            log_progress(total_samples, total_samples)
+            
+    except Exception as e:
+        logger.error(f"Fatal error processing taxonomy CSV: {e}")
+        sys.exit(1)
+		
+		
+		
+		
+		
 def main():
+    print("Starting gene_fetch.py")
     parser = setup_argument_parser()
     args = parser.parse_args()
 
@@ -1932,20 +2352,20 @@ def main():
     output_dir = Path(args.out)
     sequence_type = args.type.lower()
 
-    # Ensure output directory exists before setting up logging
-    ensure_directory(output_dir)
+    # Make sure output directory exists before setting up logging
+    make_out_dir(output_dir)
     logger = setup_logging(output_dir) 
 
-    # Initialize components with required email/api_key
+    # Initialise components with required email/api_key
     try:
         config = Config(email=args.email, api_key=args.api_key)
+        
+        # Always update thresholds based on user input, regardless of mode
+        config.update_thresholds(args.protein_size, args.nucleotide_size)
+        
+        # In single-taxid mode, log use of user-specified thresholds
         if args.single:
-            # Set very low thresholds when in single mode (effectively no threshold)
-            config.protein_length_threshold = 0
-            config.nucleotide_length_threshold = 0
-            logger.info("Single mode activated: sequence length thresholds disabled")
-        else:
-            config.update_thresholds(args.protein_size, args.nucleotide_size)
+            logger.info(f"Single-taxid mode activated: using protein size threshold {args.protein_size} and nucleotide size threshold {args.nucleotide_size}")
             
         search_type = config.set_gene_search_term(gene_name)
 
@@ -1957,90 +2377,70 @@ def main():
         logger.info(f"Output directory: {output_dir}")
         logger.info(f"Sequence type: {sequence_type}")
 
-        # Initialize remaining components
+        # Initialise remaining components
         entrez = EntrezHandler(config)
         processor = SequenceProcessor(config, entrez)
 
-        # Check if we're in single taxid mode
+        # Check if in single-taxid mode
         if args.single:
-            logger.info(f"Single taxid mode activated for taxid: {args.single}")
+            logger.info(f"Single-taxid mode activated for taxid: {args.single}")
+            
+            if args.max_sequences:
+                logger.info(f"Maximum number of sequences to fetch: {args.max_sequences}")
+                if sequence_type == 'both':
+                    logger.info(f"Note: The max_sequences limit will be applied separately to protein and nucleotide sequences")
+            
             process_single_taxid(
                 taxid=args.single,
                 gene_name=gene_name,
                 sequence_type=sequence_type,
                 processor=processor,
-                output_dir=output_dir
+                output_dir=output_dir,
+                max_sequences=args.max_sequences
             )
             logger.info("Single taxid processing completed")
             sys.exit(0)
+        elif args.max_sequences is not None:
+            logger.warning("--max-sequences parameter is ignored when not in single taxid mode")
 
-        # Regular CSV processing mode
-        if not args.input_csv:
-            logger.error("Input CSV file is required when not using --single mode")
-            sys.exit(1)
-
-        samples_csv = Path(args.input_csv)
+        # Create output manager
         output_manager = OutputManager(output_dir)
-
-        logger.info(f"Starting gene fetch for {gene_name}")
-        logger.info(f"Samples file: {samples_csv}")
-
-        try:
-            with open(samples_csv, newline='', encoding='utf-8-sig') as f:
-                reader = csv.DictReader(f)
-                process_id_col = get_process_id_column(reader.fieldnames)
-            
-                if not process_id_col:
-                    logger.error("Could not find process ID column in input CSV.")
-                    sys.exit(1)
-
-                # Count total samples
-                total_samples = sum(1 for _ in reader)
-                f.seek(0)
-                next(reader)  # Skip header
-
-                # Initialize progress tracking
-                log_progress(0, total_samples)
-
-                # Process each sample
-                for i, row in enumerate(reader, 1):
-                    try:
-                        taxid = row['taxid'].strip()
-                        process_id = row[process_id_col].strip()
-                        
-                        logger.info(f"====== Processing sample {i}/{total_samples}: {process_id} (TaxID: {taxid}) ======")
-                        
-                        process_sample(
-                            process_id=process_id,
-                            taxid=taxid,
-                            sequence_type=sequence_type,
-                            processor=processor,
-                            output_manager=output_manager,
-                            gene_name=gene_name
-                        )
-                        
-                        # Log progress
-                        log_progress(i, total_samples)
-                        
-                        # Add a small delay between samples
-                        sleep(uniform(0.5, 1.0))
-                        
-                    except Exception as e:
-                        logger.error(f"Error processing row {i}: {e}")
-                        continue
-
-                # Log final progress
-                log_progress(total_samples, total_samples)
-
-        except Exception as e:
-            logger.error(f"Fatal error: {e}")
+        
+        # Check input file requirements
+        if args.input_csv is None and args.input_taxonomy_csv is None:
+            logger.error("Error: Either input CSV file (-i/--in) or input taxonomy CSV file (-i2/--in2) must be provided")
             sys.exit(1)
+
+        # Process input samples.csv
+        if args.input_csv:
+            logger.info(f"Starting gene fetch for {gene_name} using taxids from {args.input_csv}")
+            process_taxid_csv(
+                args.input_csv,
+                gene_name, 
+                sequence_type, 
+                processor, 
+                output_manager
+            )
+        
+        # Process input samples_taxonomy.csv
+        elif args.input_taxonomy_csv:
+            logger.info(f"Starting gene fetch for {gene_name} using taxonomy from {args.input_taxonomy_csv}")
+            process_taxonomy_csv(
+                args.input_taxonomy_csv,
+                gene_name,
+                sequence_type,
+                processor,
+                output_manager,
+                entrez
+            )
 
     except ValueError as e:
         logger.error(str(e))
         sys.exit(1)
 
-    logger.info("Gene fetch completed successfully")
-
+    logger.info("*********************************************")
+    logger.info("***   Gene fetch completed successfully   ***")
+    logger.info("*********************************************")
+    
 if __name__ == "__main__":
     main()
