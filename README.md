@@ -31,6 +31,7 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
  - [Supported targets](#supported-targets)
  - [Notes](#notes)
  - [Benchmarking](#benchmarking)
+ - [Future developments](#future-developments)
  - [Contributions and citation](#contributions-and-citations)
 
 
@@ -200,6 +201,13 @@ Gene Fetch does function with other targets than those listed below, but it has 
 | All (159) _A. thaliana_ sequences >300aa | Single-taxid | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
 | 1000 Culicidae sequences >500bp | Single-taxid | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
 | 1000 _M. tubercolisis_ sequences | Single-taxid | 16S | N/A | nucleotide | 20G | 16 | 00:10:33 |
+
+## Future Development:
+- Add optional alignment of retrieved sequences
+- Add support for direct GenBank submission format output
+- Enhance LRU caching for taxonomy lookups to reduce API calls
+- Further improve efficiency of record searching and selecting the longest sequence
+- Add support for additional genetic markers beyond the currently supported set
 
 
 ## Contributions and citations
