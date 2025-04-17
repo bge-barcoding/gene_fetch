@@ -7,13 +7,12 @@ including protein-coding genes (e.g., cox1, cox2, cytb, rbcl, matk) and rRNA gen
 
 Input:
 - NCBI account email address and API key (see: https://support.nlm.nih.gov/kbArticle/?pn=KA-05317)
-- CSV file containing sample IDs, taxonomy IDs or taxonomic heirarchy for sample
-- Target name (e.g., 'cox1', '16s', 'rbcl', 'matk', etc.)
+- CSV file containing sample IDs, and taxonomy IDs or taxonomic heirarchy
+- Gene name (e.g., 'cox1', '16s', 'rbcl', 'matk')
 - Output directory path (will create new directories)
 - Sequence type ('protein', 'nucleotide', or 'both')
-- Optional: Minimum sequence length thresholds for filtering results
+- Optional: Minimum nucleotide or protein sequence length thresholds for filtering results
 - Optional: Single-taxid mode
-- Optional: maximum number of sequences to fetch (in single-taxid mode)
 
 Output:
 - FASTA files containing retrieved sequences (named by ID)
@@ -28,10 +27,11 @@ Dependencies:
 - ratelimit>=2.2.1
 
 Usage:
-    python gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> --type <sequence_type> 
-                        [-i/--in <samples.csv>] [-s/--single <taxid>] 
+    python gene_fetch.py -g/--gene <gene_name> -o/--out <output_directory> --type <sequence_type> -i/--in <samples.csv>
+                        [-i1/--in2 <sameples_taxonomy.csv] [-s/--single <taxid>] 
                         [--protein-size <min_size>] [--nucleotide-size <min_size>]
                         [-e/--email <email>] [-k/--api-key <api_key>]
+                        [--max-sequences <max_num>]
     
     # Required arguments:
     -e/--email             Email to use for NCBI API requests
@@ -40,14 +40,24 @@ Usage:
     -o/--out               Directory to save output files
     --type                 Sequence type to fetch (protein, nucleotide, or both)
     -i/--in                Input CSV file with taxonomy IDs (required unless using --single)
+    -i2/--in2              Input CSV file with taxonomic heirarchy (required unless using --single)
 
     # Optional arguments:
     -s/--single            Single TaxID to fetch all available sequences for
     --protein-size         Minimum protein sequence length (default: 500)
-    --nucleotide-size      Minimum nucleotide sequence length (default: 1500)
+    --nucleotide-size      Minimum nucleotide sequence length (default: 1000)
+    --max-sequences        Maximum number of sequences to retrieve (in single-taxid mode) (default: all)
+
+
+Future Development:
+- Add optional alignment of retrieved sequences
+- Add support for direct GenBank submission format output
+- Enhance LRU caching for taxonomy lookups to reduce API calls
+- Improve efficiency of record searching and selecting the longest sequence
+- Add support for additional genetic markers beyond the currently supported set
 
 Author: D. Parsons
-Version: 1.0.5
+Version: 1.0
 License: MIT
 """
 
@@ -105,8 +115,8 @@ def setup_argument_parser():
     parser.add_argument('--protein-size', type=int, default=500,
                       help='Minimum protein sequence length (default: 500)')
     
-    parser.add_argument('--nucleotide-size', type=int, default=1500,
-                      help='Minimum nucleotide sequence length (default: 1500)')
+    parser.add_argument('--nucleotide-size', type=int, default=1000,
+                      help='Minimum nucleotide sequence length (default: 1000)')
     
     parser.add_argument('-e', '--email', type=str, required=True,
                       help='Email to use for NCBI API requests (required)')
@@ -294,7 +304,7 @@ class Config:
 
             # Minimum nucleotide and protein lengths for 'normal' mode
             self.protein_length_threshold = 500
-            self.nucleotide_length_threshold = 1500
+            self.nucleotide_length_threshold = 1000
             
             # Minimum nucleotide and protein lengths for 'single' mode
             self.min_nucleotide_size_single_mode = 200
@@ -305,81 +315,40 @@ class Config:
             # Define gene type categories
             self._rRNA_genes = {
                 '16s': [
-                    '16S ribosomal RNA[Title]',
-                    '16S rRNA[Title]',
-                    '16S[Title]',
-                    '16S rDNA[Title]',
-                    '16S ribosomal DNA[Title]',
-                    '16s ribosomal[Title]',
-                    'rDNA 16S[Title]',
-                    'rrn16[Gene]',
-                    'rrs[Gene]',
-                    '16S ribosomal RNA[Gene]',
-                    'rrn16[rRNA]',
-                    'rrs[rRNA]',
-                    '16S ribosomal RNA[rRNA]',
-                    'NOT methylase[Title]', 
-                    'NOT methyltransferase[Title]',
-                ],
-                '23s': [
-                    '23S ribosomal RNA[Title]',
-                    '23S rRNA[Title]',
-                    '23S[Title]',
-                    '23S rDNA[Title]',
-                    '23S ribosomal DNA[Title]',
-                    '23s ribosomal[Title]',
-                    'rDNA 23S[Title]',
-                    'rrl[Gene]',
-                    'rrn23[Gene]',
-                    '23S ribosomal RNA[Gene]',
-                    'NOT methylase[Title]', 
-                    'NOT methyltransferase[Title]',
+                    '16S ribosomal RNA[Gene]', '16S rRNA[Gene]', 'rrs[Gene]', 'rrn16[Gene]',
+                    '16S ribosomal RNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '16S rRNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '16S[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '16S ribosomal RNA[rRNA]', 'rrs[rRNA]', 'rrn16[rRNA]'
                 ],
                 '18s': [
-                    '18S ribosomal RNA[Title]',
-                    '18S rRNA[Title]',
-                    '18S[Title]',
-                    '18S rDNA[Title]',
-                    '18S ribosomal DNA[Title]',
-                    'SSU rRNA[Title]',
-                    'SSU ribosomal RNA[Title]',
-                    'small subunit ribosomal RNA[Title]',
-                    'small subunit rRNA[Title]',
-                    '18s ribosomal[Title]',
-                    'rDNA 18S[Title]',
-                    'rrn18[Gene]',
-                    'NOT methylase[Title]', 
-                    'NOT methyltransferase[Title]',
+                    '18S ribosomal RNA[Gene]', '18S rRNA[Gene]', 'rrn18[Gene]', 'SSU rRNA[Gene]',
+                    '18S ribosomal RNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '18S rRNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '18S[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '18S ribosomal RNA[rRNA]', 'SSU rRNA[rRNA]', 'rrn18[rRNA]'
+                ],
+                '23s': [
+                    '23S ribosomal RNA[Gene]', '23S rRNA[Gene]', 'rrl[Gene]', 'rrn23[Gene]',
+                    '23S ribosomal RNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '23S rRNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '23S[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '23S ribosomal RNA[rRNA]', 'rrl[rRNA]', 'rrn23[rRNA]'
                 ],
                 '28s': [
-                    '28S ribosomal RNA[Title]',
-                    '28S rRNA[Title]',
-                    '28S[Title]',
-                    '28S rDNA[Title]',
-                    '28S ribosomal DNA[Title]',
-                    'LSU rRNA[Title]',
-                    'LSU ribosomal RNA[Title]',
-                    'large subunit ribosomal RNA[Title]',
-                    'large subunit rRNA[Title]',
-                    '28s ribosomal[Title]',
-                    'rDNA 28S[Title]',
-                    'rrn28[Gene]',
-                    'NOT methylase[Title]', 
-                    'NOT methyltransferase[Title]',
+                    '28S ribosomal RNA[Gene]', '28S rRNA[Gene]', 'rrn28[Gene]', 'LSU rRNA[Gene]',
+                    '28S ribosomal RNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '28S rRNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '28S[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '28S ribosomal RNA[rRNA]', 'LSU rRNA[rRNA]', 'rrn28[rRNA]'
                 ],
                 '12s': [
-                    '12S ribosomal RNA[Title]',
-                    '12S rRNA[Title]',
-                    '12S[Title]',
-                    '12S rDNA[Title]',
-                    '12S ribosomal DNA[Title]',
-                    '12s ribosomal[Title]',
-                    'rDNA 12S[Title]',
-                    'mt-rrn1[Gene]',
-                    'mt 12S rRNA[Gene]',
-                    'NOT methylase[Title]', 
-                    'NOT methyltransferase[Title]',
-                ],
+                    '12S ribosomal RNA[Gene]', '12S rRNA[Gene]', 'mt-rrn1[Gene]', 'mt 12S rRNA[Gene]',
+                    '12S ribosomal RNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '12S rRNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '12S[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
+                    '12S ribosomal RNA[rRNA]', 'mt-rrn1[rRNA]', 'mt 12S rRNA[rRNA]'
+                ],                
                 'its1': [
                     'ITS1[Title]',
                     'internal transcribed spacer 1[Title]',
@@ -840,7 +809,7 @@ class SequenceProcessor:
                         else:
                             logger.info(f"WGS record {record_id} has a placeholder/incomplete sequence")
                     except Exception as e:
-                        logger.error(f"Error accessing sequence content for WGS record {record_id}: {e}")
+                        logger.warning(f"Unable to access sequence content directly from WGS record {record_id}: {e}")
                 
                 # If there is no sequence, check for 'contig' line
                 if 'contig' in record.annotations:
@@ -1320,7 +1289,7 @@ class SequenceProcessor:
                 logger.error("Failed to parse one or more segments")
                 return None, False
             
-            logger.info(f"Successfully parsed {len(result)} segments")
+            logger.debug(f"Successfully parsed {len(result)} segments")
             return result, is_complement
                 
         except Exception as e:
@@ -1383,7 +1352,7 @@ class SequenceProcessor:
                    # Create new record with complete sequence
                    new_record = nucleotide_record[:]
                    new_record.seq = Seq(complete_sequence)
-                   logger.info(f"Successfully extracted nucleotide sequence of length {len(complete_sequence)} (from protein {protein_record.id})")
+                   logger.info(f"Successfully extracted nucleotide sequence: Length {len(complete_sequence)} (from protein record: {protein_record.id})")
                    
                    return new_record
                    
@@ -1579,9 +1548,9 @@ class SequenceProcessor:
                                     # Sort by length (descending)
                                     sorted_summaries.sort(key=lambda x: x[1], reverse=True)
                                     
-                                    # Take only top 10 IDs by sequence length
-                                    processed_ids = [item[0] for item in sorted_summaries[:10]]
-                                    logger.info(f"Successfully filtered to top 10 proteins by length (longest: {sorted_summaries[0][1]} aa)")
+                                    # Take only top 250 IDs by sequence length
+                                    processed_ids = [item[0] for item in sorted_summaries[:250]]
+                                    logger.info(f"Successfully filtered to top proteins by length (longest: {sorted_summaries[0][1]} aa)")
                                 
                             except Exception as e:
                                 logger.error(f"Error in prefiltering: {e}")
@@ -1608,9 +1577,24 @@ class SequenceProcessor:
                                 handle.close()
                                 
                                 # Add logging for successful protein fetch
-                                logger.info(f"Successfully fetched protein sequence of length {len(temp_record.seq)} (accession {temp_record.id})")
+                                logger.info(f"Successfully fetched protein sequence: Length {len(temp_record.seq)} (accession {temp_record.id})")
 
-                                # Only skip UniProt records in non-single mode
+                                # Filter out false matches like "16S rRNA methylase" for rRNA targets
+                                is_target_gene = True
+                                if gene_name.lower() in self.config._rRNA_genes:
+                                    # Check for misleading annotations
+                                    for feature in temp_record.features:
+                                        if feature.type == "CDS" and "product" in feature.qualifiers:
+                                            product = feature.qualifiers["product"][0].lower()
+                                            if f"{gene_name.lower()} rrna" in product and any(x in product for x in ["methylase", "methyltransferase", "pseudouridylate", "synthase"]):
+                                                logger.info(f"Skipping false match with product: {product}")
+                                                is_target_gene = False
+                                                break
+                                
+                                if not is_target_gene:
+                                    continue
+
+                                # Only skip UniProt/Swiss-Prot protein accession numbers in non-single mode
                                 if not fetch_all:
                                     # Skip problematic UniProt/Swiss-Prot protein accession numbers
                                     if re.match(r'^[A-Z]\d+', temp_record.id) and not re.match(r'^[A-Z]{2,}', temp_record.id):
@@ -1656,6 +1640,7 @@ class SequenceProcessor:
                                     nucleotide_records.append(nucleotide_record)
                                     nucleotide_found = True
                                     logger.info(f"Successfully fetched corresponding nucleotide sequence")
+                                    break  # Exit loop after finding the first valid protein and nucleotide pair
                                 else:
                                     logger.warning("Failed to fetch corresponding nucleotide sequence")
                                     protein_records.clear()
@@ -1675,12 +1660,16 @@ class SequenceProcessor:
                     if progress_counters:
                         progress_counters['sequence_counter'] = sequence_counter
                 
-                # Modify search string based on fetch_all mode
+                # Modify search string based on fetch_all mode and add exclusion terms for rRNA genes
+                search_exclusions = ""
+                if gene_name.lower() in self.config._rRNA_genes:
+                    search_exclusions = " NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]"
+                    
                 if fetch_all:
-                    nucleotide_search = f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp]"
+                    nucleotide_search = f"{self.config.gene_search_term}{search_exclusions} AND txid{current_taxid}[Organism:exp]"
                 else:
-                    nucleotide_search = (f"{self.config.gene_search_term} AND txid{current_taxid}[Organism:exp] "
-                                        f"AND {self.config.nucleotide_length_threshold}:30000[SLEN]")
+                    nucleotide_search = (f"{self.config.gene_search_term}{search_exclusions} AND txid{current_taxid}[Organism:exp] "
+                                        f"AND {self.config.nucleotide_length_threshold}:60000[SLEN]")
                                                          
                 logger.info(f"Searching nucleotide database at rank {rank_name} ({taxon_name}) with term: {nucleotide_search}")
                 
@@ -1732,9 +1721,9 @@ class SequenceProcessor:
                                     # Sort by length (descending)
                                     sorted_summaries.sort(key=lambda x: x[1], reverse=True)
                                     
-                                    # Take only top 10 IDs by sequence length
-                                    processed_ids = [item[0] for item in sorted_summaries[:10]]
-                                    logger.info(f"Successfully filtered to top 10 nucleotide sequences by length (longest: {sorted_summaries[0][1]} bp)")
+                                    # Take only top 250 IDs by sequence length
+                                    processed_ids = [item[0] for item in sorted_summaries[:250]]
+                                    logger.info(f"Successfully filtered to top nucleotide sequences by length (longest: {sorted_summaries[0][1]} bp)")
                                 
                             except Exception as e:
                                 logger.error(f"Error in nucleotide prefiltering: {e}")
@@ -1757,33 +1746,58 @@ class SequenceProcessor:
                                 if temp_record:
                                     logger.info(f"Successfully fetched nucleotide sequence of length {len(temp_record.seq)} (accession {temp_record.id})")
                                     
-                                    if gene_name not in self.config._protein_coding_genes:
-                                        # For rRNA genes, use full sequence
-                                        if fetch_all:
-                                            nucleotide_records.append(temp_record)
-                                            nucleotide_found = True
-                                            if not best_taxonomy:
-                                                best_taxonomy = temp_record.annotations.get("taxonomy", [])
-                                                
-                                            # Update counter and log progress
-                                            sequence_counter += 1
-                                            if progress_counters:
-                                                progress_counters['sequence_counter'] = sequence_counter
-                                            
-                                            # Log progress
-                                            if max_sequences:
-                                                logger.info(f"Progress: {sequence_counter}/{max_sequences} sequences processed")
-                                            else:
-                                                # If max_sequences is None, use the total found sequences
-                                                total_found = len(id_list)
-                                                logger.info(f"Progress: {sequence_counter}/{total_found} sequences processed")
-                                        else:
-                                            # Keep only longest sequence
-                                            if not nucleotide_records or len(temp_record.seq) > len(nucleotide_records[0].seq):
-                                                nucleotide_records.clear()
-                                                nucleotide_records.append(temp_record)
+                                    # Check for misleading annotations even after search filtering
+                                    is_target_gene = True
+                                    if gene_name.lower() in self.config._rRNA_genes:
+                                        for feature in temp_record.features:
+                                            if feature.type == "CDS" and "product" in feature.qualifiers:
+                                                product = feature.qualifiers["product"][0].lower()
+                                                if f"{gene_name.lower()} rrna" in product and any(x in product for x in ["methylase", "methyltransferase", "pseudouridylate", "synthase"]):
+                                                    logger.info(f"Skipping record with misleading product: {product}")
+                                                    is_target_gene = False
+                                                    break
+                                    
+                                    if not is_target_gene:
+                                        continue
+                                        
+                                    if gene_name.lower() in self.config._rRNA_genes:
+                                        # For rRNA genes, extract the specific rRNA feature
+                                        rRNA_record = self.extract_rRNA(temp_record, gene_name, fetch_all)
+                                        
+                                        if rRNA_record:
+                                            # Only proceed if we successfully extracted the rRNA feature
+                                            logger.info(f"Successfully extracted {gene_name} rRNA feature of length {len(rRNA_record.seq)} from {temp_record.id}")
+                                            if fetch_all:
+                                                nucleotide_records.append(rRNA_record)
                                                 nucleotide_found = True
-                                                best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                                if not best_taxonomy:
+                                                    best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                                    
+                                                # Update counter and log progress
+                                                sequence_counter += 1
+                                                if progress_counters:
+                                                    progress_counters['sequence_counter'] = sequence_counter
+                                                
+                                                # Log progress
+                                                if max_sequences:
+                                                    logger.info(f"Progress: {sequence_counter}/{max_sequences} sequences processed")
+                                                else:
+                                                    # If max_sequences is None, use the total found sequences
+                                                    total_found = len(id_list)
+                                                    logger.info(f"Progress: {sequence_counter}/{total_found} sequences processed")
+                                            else:
+                                                # Keep only longest rRNA
+                                                if not nucleotide_records or len(rRNA_record.seq) > len(nucleotide_records[0].seq):
+                                                    nucleotide_records.clear()
+                                                    nucleotide_records.append(rRNA_record)
+                                                    nucleotide_found = True
+                                                    best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                                    logger.info(f"Found valid {gene_name} rRNA sequence. Stopping search since sequences are sorted by length.")
+                                                    break  # Exit the loop after finding the first valid sequence
+                                        else:
+                                            # Skip records where no rRNA feature was found
+                                            logger.info(f"No {gene_name} rRNA feature found in {temp_record.id} - skipping")
+                                            continue
                                     else:
                                         # For protein-coding genes, extract CDS
                                         logger.info(f"Attempting to extract CDS from nucleotide sequence (accession {temp_record.id})")
@@ -1815,8 +1829,11 @@ class SequenceProcessor:
                                                     nucleotide_records.append(cds_record)
                                                     nucleotide_found = True
                                                     best_taxonomy = temp_record.annotations.get("taxonomy", [])
+                                                    logger.info(f"Found valid {gene_name} CDS sequence. Stopping search since sequences are sorted by length.")
+                                                    break  # Exit the loop after finding the first valid sequence
                                         else:
                                             logger.warning(f"Failed to extract CDS from nucleotide sequence (accession {temp_record.id})")
+                                            continue
 
                             except Exception as e:
                                 logger.error(f"Error processing sequence {seq_id}: {e}")
@@ -1835,6 +1852,7 @@ class SequenceProcessor:
             logger.error("Full error details:", exc_info=True)
 
         return protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_records, nucleotide_records
+
 
     # Handles taxonomy traversal (i.e. taxonomy walking) for target sequence searches
     def search_and_fetch_sequences(self, taxid: str, gene_name: str, sequence_type: str, fetch_all: bool = False, 
@@ -1940,11 +1958,142 @@ class SequenceProcessor:
 
         logger.info(f"Search completed. Matched at rank: {matched_rank}")
         return protein_records, nucleotide_records, best_taxonomy, matched_rank
+	
+    # Extract rRNA feature of specified type from record
+    def extract_rRNA(self, record, gene_name, single_mode=False):
+        # Get minimum size threshold for single-taxid mode or normal mode
+        min_size = self.config.min_nucleotide_size_single_mode if single_mode else 100
+        
+        # Convert gene name to lowercase and normalize
+        rRNA_type = gene_name.lower().replace('s rrna', 's').replace(' rrna', '').replace('rrn', '')
+        
+        # Handle special gene name synonyms for different rRNA types
+        if rRNA_type == 'rrs':
+            rRNA_type = '16s'
+        elif rRNA_type == 'rrl':
+            rRNA_type = '23s'
+        elif rRNA_type == 'mt-rrn1':
+            rRNA_type = '12s'
+        elif rRNA_type == 'ssu':
+            rRNA_type = '18s'
+        elif rRNA_type == 'lsu' and gene_name.lower() != '5s':
+            # LSU usually refers to 23S in bacteria or 28S in eukaryotes,
+            # so bias toward the user's query if available
+            if '23' in gene_name:
+                rRNA_type = '23s'
+            elif '28' in gene_name:
+                rRNA_type = '28s'
+            else:
+                # LSU without specification - will match either
+                rRNA_type = 'lsu'
+        
+        logger.info(f"Looking for {rRNA_type} rRNA features in record {record.id}")
+        
+        # Define alternative names for different rRNA types
+        rRNA_alternatives = {
+            '16s': ['16s', 'rrs', 'rrn16', 'ssu'],  # Small subunit bacterial
+            '18s': ['18s', 'rrn18', 'ssu'],         # Small subunit eukaryotic
+            '23s': ['23s', 'rrl', 'rrn23', 'lsu'],  # Large subunit bacterial
+            '28s': ['28s', 'rrn28', 'lsu'],         # Large subunit eukaryotic
+            '12s': ['12s', 'mt-rrn1', 'mt 12s'],    # Mitochondrial SSU
+            '5s': ['5s', 'rrn5', 'rrn5s', 'rrna 5s'], # 5S bacterial
+        }
+        
+        # Get the set of alternative names for our target rRNA
+        target_alternatives = set()
+        for key, alternatives in rRNA_alternatives.items():
+            if rRNA_type in alternatives:
+                target_alternatives.update(alternatives)
+        
+        if not target_alternatives:
+            # If we don't have a pre-defined set, just use the original type
+            target_alternatives = {rRNA_type}
+        
+        logger.info(f"Searching for these rRNA name variations in feature table: {target_alternatives}")
+        
+        # First look for rRNA feature type
+        for feature in record.features:
+            if feature.type == "rRNA":
+                # Check product qualifier
+                if 'product' in feature.qualifiers:
+                    product = feature.qualifiers['product'][0].lower()
+                    
+                    # See if product matches any of our target alternatives
+                    is_match = False
+                    for alt in target_alternatives:
+                        if alt in product and "ribosomal" in product:
+                            is_match = True
+                            break
+                    
+                    if is_match:
+                        # Skip if product also contains misleading terms
+                        if any(x in product for x in ["methylase", "methyltransferase", "pseudouridylate", "synthase"]):
+                            continue
+                        logger.info(f"Found matching rRNA feature with product: {product}")
+                        try:
+                            rRNA_record = record[:]
+                            rRNA_record.seq = feature.extract(record.seq)
+                            if len(rRNA_record.seq) >= min_size:
+                                logger.info(f"Successfully extracted rRNA of length {len(rRNA_record.seq)}")
+                                return rRNA_record
+                        except Exception as e:
+                            logger.error(f"Error extracting rRNA feature: {e}")
+                
+                # Check gene qualifier
+                if 'gene' in feature.qualifiers:
+                    gene = feature.qualifiers['gene'][0].lower()
+                    
+                    # Check if gene matches any of our target alternatives
+                    is_match = False
+                    for alt in target_alternatives:
+                        if gene == alt or gene == f"{alt} rrna":
+                            is_match = True
+                            break
+                            
+                    if is_match:
+                        logger.info(f"Found matching rRNA feature with gene: {gene}")
+                        try:
+                            rRNA_record = record[:]
+                            rRNA_record.seq = feature.extract(record.seq)
+                            if len(rRNA_record.seq) >= min_size:
+                                logger.info(f"Successfully extracted rRNA of length {len(rRNA_record.seq)}")
+                                return rRNA_record
+                        except Exception as e:
+                            logger.error(f"Error extracting rRNA feature: {e}")
+                            
+        # Look for gene features
+        for feature in record.features:
+            if feature.type == "gene":
+                if 'gene' in feature.qualifiers:
+                    gene = feature.qualifiers['gene'][0].lower()
+                    
+                    # Check if gene matches any target alternatives
+                    is_match = False
+                    for alt in target_alternatives:
+                        if gene == alt or gene == f"{alt} rrna":
+                            is_match = True
+                            break
+                            
+                    if is_match:
+                        logger.info(f"Found matching gene feature: {gene}")
+                        try:
+                            rRNA_record = record[:]
+                            rRNA_record.seq = feature.extract(record.seq)
+                            if len(rRNA_record.seq) >= min_size:
+                                logger.info(f"Successfully extracted gene region of length {len(rRNA_record.seq)}")
+                                return rRNA_record
+                        except Exception as e:
+                            logger.error(f"Error extracting gene feature: {e}")
+        
+        logger.info(f"No specific {rRNA_type} rRNA feature found in record {record.id}")
+        return None
 		
 		
 		
-		
-		
+        
+        
+        
+        
 # =============================================================================
 # Output file and directory management
 # =============================================================================		
@@ -2070,6 +2219,8 @@ def process_sample(process_id: str, taxid: str, sequence_type: str,
                 result_data['protein_length'] = len(protein_record.seq)
                 result_data['protein_path'] = str(protein_path.absolute())
                 
+                logger.info(f"SELECTED SEQUENCE: {protein_record.id}: Length {len(protein_record.seq)}aa: Matched at {matched_rank}")
+                
                 protein_record.id = process_id
                 protein_record.description = ""
                 SeqIO.write(protein_record, protein_path, "fasta")
@@ -2086,6 +2237,8 @@ def process_sample(process_id: str, taxid: str, sequence_type: str,
                 result_data['nucleotide_accession'] = nucleotide_record.id
                 result_data['nucleotide_length'] = len(nucleotide_record.seq)
                 result_data['nucleotide_path'] = str(nucleotide_path.absolute())
+                
+                logger.info(f"SELECTED SEQUENCE: {nucleotide_record.id}: Length {len(nucleotide_record.seq)}bp: Matched at {matched_rank}")
                 
                 nucleotide_record.id = process_id
                 nucleotide_record.description = ""
