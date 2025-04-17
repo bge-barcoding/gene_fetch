@@ -199,6 +199,7 @@ Gene Fetch does function with other targets than those listed below, but it has 
 | 570 Arthropod samples | Normal | ND1 | samples.csv | Nucleotide | 10G | 4 | 01:58:35 |
 | All (159) _A. thaliana_ sequences >300aa | Single-taxid | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
 | 1000 Culicidae sequences >500bp | Single-taxid | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
+| 1000 _M. tubercolisis_ sequences | Single-taxid | 16S | N/A | nucleotide | 20G | 16 | 00:10:33 |
 
 
 ## Contributions and citations
