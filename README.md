@@ -7,10 +7,9 @@
 This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxids) or taxonomic information. It can retrieve both protein and nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 
-## Feature highlight
+## Highlight features
 - Fetch protein and/or nucleotide sequences from NCBI GenBank database.
 - Handles both direct nucleotide sequences and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
-.
 - Support for both protein-coding and rDNA genes.
 - Single-taxid mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds are reduced (protein: 50aa, nucleotide: 100bp)).
 - Customisable length filtering thresholds for protein and nucleotide sequences.
@@ -19,7 +18,7 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
 - Robust error handling, error and progress logging, and NCBI API rate limits (10 requests/second).
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
 - 'Checkpointing': if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
-- When more than 50 matching sequences are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders them by length, and processes the longest sequences.
+- When more than 50 matching GenBank records are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders the records by sequence length, and processes the longest sequences first.
 
 ## Contents
  - [Installation](#installation)
