@@ -319,7 +319,7 @@ class Config:
                     '16S ribosomal RNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
                     '16S rRNA[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
                     '16S[Title] NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]',
-                    '16S ribosomal RNA[rRNA]', 'rrs[rRNA]', 'rrn16[rRNA]'
+                    '16S ribosomal RNA[All Fields]', 'rrs[All Fields]', 'rrn16[All Fields]'
                 ],
                 '18s': [
                     '18S ribosomal RNA[Gene]', '18S rRNA[Gene]', 'rrn18[Gene]', 'SSU rRNA[Gene]',
@@ -854,13 +854,15 @@ class SequenceProcessor:
             # Get minimum size threshold for single mode
             min_size = self.config.min_nucleotide_size_single_mode if single_mode else 100
             
-            if gene_name.lower() in self.config._protein_coding_genes:
+            # Initialize base_gene at the beginning to ensure it's always defined
+            base_gene = gene_name.lower()
+            
+            if base_gene in self.config._protein_coding_genes:
                 # Get the gene variations from config
-                variations = self.config._protein_coding_genes[gene_name.lower()]
+                variations = self.config._protein_coding_genes[base_gene]
                 gene_variations = {v.split('[')[0].strip('"').lower() for v in variations}
                 
                 # Add common pattern variations for different writing styles
-                base_gene = gene_name.lower()
                 if base_gene == 'rbcl':
                     pattern_variations = [
                         'rbcl', 'rbc-l', 'rbc l', 'rubisco', 'ribulose-1,5-bisphosphate', 'ribulose bisphosphate'
@@ -872,7 +874,7 @@ class SequenceProcessor:
                     ]
                 elif base_gene == 'cytb':
                     pattern_variations = ['cytb', 'cyt b', 'cyt-b', 'cytochrome b', 'cytochrome-b'
-					]
+                    ]
                 elif base_gene == 'matk':
                     pattern_variations = [
                         'matk', 'mat-k', 'mat k', 'maturase k', 'maturase-k', 'maturase', 
@@ -918,7 +920,7 @@ class SequenceProcessor:
                 pattern_variations = [
                     '16s', '16s rrna', '16s ribosomal rna', '16s ribosomal', 
                     '16 s rrna', '16 s', 'rrn16', 'rrn 16'
-					]
+                    ]
             elif base_gene == '18s' or base_gene == '18s rrna' or base_gene == 'rrn18':
                 pattern_variations = [
                     '18s', '18s rrna', '18s ribosomal rna', '18s ribosomal', 
@@ -945,7 +947,14 @@ class SequenceProcessor:
                 ]
             else:
                 logger.warning(f"No defined variations for gene {gene_name}")
-                gene_variations = {gene_name.lower()}
+                # For any other gene (including tetraspanin), add reasonable variations
+                gene_variations = {base_gene}
+                pattern_variations = [
+                    base_gene, 
+                    f"{base_gene} gene", 
+                    f"{base_gene} protein", 
+                    f"{base_gene}-like"
+                ]
                 
             # If pattern variations are present, add them to regular variations
             if pattern_variations:
@@ -1060,9 +1069,9 @@ class SequenceProcessor:
             }
             
             # Get maximum acceptable size for this gene
-            max_size = max_gene_sizes.get(gene_name.lower(), 3000)  # Default to 3000 for unknown genes
+            max_size = max_gene_sizes.get(base_gene, 3000)  # Default to 3000 for unknown genes
             
-        # FALLBACK 1: Check for gene feature with matching name but no CDS
+            # FALLBACK 1: Check for gene feature with matching name but no CDS
             for feature in record.features:
                 if feature.type == "gene":
                     gene_qualifiers = feature.qualifiers.get('gene', [])
@@ -1111,7 +1120,7 @@ class SequenceProcessor:
                         except Exception as e:
                             logger.error(f"Gene region extraction error for {record.id}: {e}")
         
-        # FALLBACK 2: Check if it is an mRNA sequence with no CDS feature
+            # FALLBACK 2: Check if it is an mRNA sequence with no CDS feature
             mol_type = ""
             for feature in record.features:
                 if feature.type == "source" and "mol_type" in feature.qualifiers:
@@ -1141,7 +1150,7 @@ class SequenceProcessor:
                 else:
                     logger.info(f"Description doesn't match any target gene variation")
         
-        # FALLBACK 3: If it's a partial sequence entry, check if gene name appears in description
+            # FALLBACK 3: If it's a partial sequence entry, check if gene name appears in description
             description_lower = record.description.lower()
             if "partial" in description_lower:
                 matching_vars = [var for var in gene_variations if var in description_lower]
@@ -1159,16 +1168,16 @@ class SequenceProcessor:
                     else:
                         logger.warning(f"Partial sequence too short ({len(record.seq)} bp < {min_size} bp) (accession {record.id})")
         
-        # FALLBACK 4: For all records, check if the target gene is in the organism name or sequence ID
-        # This is a last resort when in single-taxid mode and are desperate for more sequences
+            # FALLBACK 4: For all records, check if the target gene is in the organism name or sequence ID
+            # This is a last resort when in single-taxid mode and are desperate for more sequences
             org_name = ""
             for feature in record.features:
                 if feature.type == "source" and "organism" in feature.qualifiers:
                     org_name = feature.qualifiers["organism"][0].lower()
                     break
         
-            if gene_name.lower() in record.id.lower() or gene_name.lower() in org_name:
-                logger.info(f"Last resort: Gene name {gene_name} found in sequence ID or organism name (accession {record.id})")
+            if base_gene in record.id.lower() or base_gene in org_name:
+                logger.info(f"Last resort: Gene name {base_gene} found in sequence ID or organism name (accession {record.id})")
                 
                 # Check if the sequence is too large
                 if len(record.seq) > max_size:
@@ -1619,7 +1628,7 @@ class SequenceProcessor:
                                     
                                     # Log progress
                                     if max_sequences:
-                                        logger.info(f"Progress: {sequence_counter}/{max_sequences} sequences processed")
+                                        logger.info(f"====>>> Progress: {sequence_counter}/{max_sequences} sequences processed")
                                     else:
                                         # If max_sequences is None, use the total found sequences
                                         total_found = len(id_list)
