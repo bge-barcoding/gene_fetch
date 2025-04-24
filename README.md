@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="gene_fetch_logo.svg" width="300" alt="gene_fetch_logo">
+  <img src="gene_fetch_logo.svg" width="400" alt="gene_fetch_logo">
 </p>
 
 # GeneFetch 
