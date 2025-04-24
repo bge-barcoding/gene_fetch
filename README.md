@@ -1,9 +1,9 @@
 <div align="center">
-    <img src="./Gene_fetch_logo.svg" width="300" alt="Gene Fetch Logo">
+    <img src="./Gene_fetch_logo.svg" width="300" alt="GeneFetch Logo">
 </div>
 
 
-# Gene_fetch 
+# GeneFetch 
 This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxids) or taxonomic information. It can retrieve both protein and nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 
@@ -35,7 +35,7 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
 
 
 ## Installation
-First, clone the Gene Fetch GitHub repository to your current path, and enter the Gene Fetch installation directory 
+First, clone the GeneFetch GitHub repository to your current path, and enter the Gene Fetch installation directory 
 ```bash
 git clone https://github.com/bge-barcoding/gene_fetch
 
@@ -160,7 +160,7 @@ output_dir/
 | PP355486.1 | 581 | Aedes scutellaris isolate NC.033 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
 
 
-## Running gene_fetch on a cluster
+## Running GeneFetch on a cluster
 - See '1_gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular). 
 - Edit 'mem' and/or 'cpus-per-task' to set memory and CPU/threads allocation.
 - Change paths and variables as needed.
@@ -170,7 +170,7 @@ sbatch 1_gene_fetch.sh
 ```
 
 ## Supported targets
-Gene Fetch does function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the below targets. More targets can be added into script (see 'class config').
+GeneFetch does function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the below targets. More targets can be added into script (see 'class config').
 - cox1/COI/cytochrome c oxidase subunit I
 - cox2/COII/cytochrome c oxidase subunit II
 - cox3/COIIIcytochrome c oxidase subunit III
