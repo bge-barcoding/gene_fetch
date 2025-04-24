@@ -2,6 +2,8 @@
     <img src="./Gene_fetch_logo.svg" width="300" alt="GeneFetch Logo">
 </div>
 
+![image](https://github.com/user-attachments/assets/7a051d9c-5935-4ec2-a777-42238daeb6b3)
+
 
 # GeneFetch 
 This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxids) or taxonomic information. It can retrieve both protein and nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
