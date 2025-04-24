@@ -1,8 +1,5 @@
-<div align="center">
-    <img src="./Gene_fetch_logo.svg" width="300" alt="GeneFetch Logo">
-</div>
-
 ![image](https://github.com/user-attachments/assets/7a051d9c-5935-4ec2-a777-42238daeb6b3)
+
 
 
 # GeneFetch 
