@@ -1,0 +1,4 @@
+biopython>=1.80
+gooey>=1.0.8
+ratelimit>=2.2.1
+wxpython>=4.1.0

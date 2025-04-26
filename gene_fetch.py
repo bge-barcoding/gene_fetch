@@ -1478,6 +1478,10 @@ class SequenceProcessor:
             return [], {}, "", {}
 
     # Central nucleotide & protein search function using fetched taxid
+    # Modified version of the try_fetch_at_taxid function in the SequenceProcessor class
+    # This change will make the progress reporting use the actual number of sequences found
+    # rather than the max_sequences limit
+
     def try_fetch_at_taxid(self, current_taxid: str, rank_name: str, taxon_name: str,                          
                         sequence_type: str, gene_name: str,
                         protein_records: List[SeqRecord],      
@@ -1516,6 +1520,13 @@ class SequenceProcessor:
                         logger.info(f"Found {len(id_list)} protein records")
                         if len(id_list) > 5:  # Only log IDs if there are not too many
                             logger.info(f"Protein IDs: {id_list}")
+                        
+                        # Update the progress_counters with the actual total if in fetch_all mode
+                        if fetch_all and progress_counters:
+                            # If max_sequences is specified, use min(max_sequences, len(id_list))
+                            # Otherwise use the actual number of sequences found
+                            total_sequences = min(max_sequences, len(id_list)) if max_sequences else len(id_list)
+                            progress_counters['total_sequences'] = total_sequences
                         
                         # For non-fetch_all mode, apply prefiltering if there are many IDs
                         processed_ids = id_list
@@ -1626,13 +1637,12 @@ class SequenceProcessor:
                                     if progress_counters:
                                         progress_counters['sequence_counter'] = sequence_counter
                                     
-                                    # Log progress
-                                    if max_sequences:
-                                        logger.info(f"====>>> Progress: {sequence_counter}/{max_sequences} sequences processed")
-                                    else:
-                                        # If max_sequences is None, use the total found sequences
-                                        total_found = len(id_list)
-                                        logger.info(f"Progress: {sequence_counter}/{total_found} sequences processed")
+                                    # Log progress with actual total sequences
+                                    total_to_use = progress_counters.get('total_sequences', max_sequences or len(id_list))
+                                    logger.info(f"====>>> Progress: {sequence_counter}/{total_to_use} sequences processed")
+                                    # Also print a direct progress line for the GUI to pick up
+                                    percentage = int(100 * sequence_counter / total_to_use)
+                                    print(f"progress: {percentage}%")
                                 else:
                                     # Keep only longest sequence
                                     if not protein_records or len(temp_record.seq) > len(protein_records[0].seq):
@@ -1689,6 +1699,13 @@ class SequenceProcessor:
                         logger.info(f"Found {len(id_list)} nucleotide sequence IDs")
                         if len(id_list) > 5:  # Only log IDs if there are not too many
                             logger.debug(f"Nucleotide IDs: {id_list}")
+                        
+                        # Update the progress_counters with the actual total in fetch_all mode
+                        if fetch_all and progress_counters:
+                            # If max_sequences is specified, use min(max_sequences, len(id_list))
+                            # Otherwise use the actual number of sequences found
+                            total_sequences = min(max_sequences, len(id_list)) if max_sequences else len(id_list)
+                            progress_counters['total_sequences'] = total_sequences
 
                         # Apply the same prefiltering optimisation for nucleotide sequences
                         processed_ids = id_list
@@ -1787,13 +1804,12 @@ class SequenceProcessor:
                                                 if progress_counters:
                                                     progress_counters['sequence_counter'] = sequence_counter
                                                 
-                                                # Log progress
-                                                if max_sequences:
-                                                    logger.info(f"Progress: {sequence_counter}/{max_sequences} sequences processed")
-                                                else:
-                                                    # If max_sequences is None, use the total found sequences
-                                                    total_found = len(id_list)
-                                                    logger.info(f"Progress: {sequence_counter}/{total_found} sequences processed")
+                                                # Log progress with actual total sequences
+                                                total_to_use = progress_counters.get('total_sequences', max_sequences or len(id_list))
+                                                logger.info(f"Progress: {sequence_counter}/{total_to_use} sequences processed")
+                                                # Also print a direct progress line for the GUI to pick up
+                                                percentage = int(100 * sequence_counter / total_to_use)
+                                                print(f"progress: {percentage}%")
                                             else:
                                                 # Keep only longest rRNA
                                                 if not nucleotide_records or len(rRNA_record.seq) > len(nucleotide_records[0].seq):
@@ -1824,13 +1840,12 @@ class SequenceProcessor:
                                                 if progress_counters:
                                                     progress_counters['sequence_counter'] = sequence_counter
                                                 
-                                                # Log progress
-                                                if max_sequences:
-                                                    logger.info(f"Progress: {sequence_counter}/{max_sequences} sequences processed")
-                                                else:
-                                                    # If max_sequences is None, use the total found sequences
-                                                    total_found = len(id_list)
-                                                    logger.info(f"Progress: {sequence_counter}/{total_found} sequences processed")
+                                                # Log progress with actual total sequences
+                                                total_to_use = progress_counters.get('total_sequences', max_sequences or len(id_list))
+                                                logger.info(f"Progress: {sequence_counter}/{total_to_use} sequences processed")
+                                                # Also print a direct progress line for the GUI to pick up
+                                                percentage = int(100 * sequence_counter / total_to_use)
+                                                print(f"progress: {percentage}%")
                                             else:
                                                 # Keep only longest CDS
                                                 if not nucleotide_records or len(cds_record.seq) > len(nucleotide_records[0].seq):
@@ -1861,8 +1876,7 @@ class SequenceProcessor:
             logger.error("Full error details:", exc_info=True)
 
         return protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_records, nucleotide_records
-
-
+    
     # Handles taxonomy traversal (i.e. taxonomy walking) for target sequence searches
     def search_and_fetch_sequences(self, taxid: str, gene_name: str, sequence_type: str, fetch_all: bool = False, 
                                   progress_counters: Optional[Dict[str, int]] = None) -> Tuple[List[SeqRecord], List[SeqRecord], List[str], str]:  
