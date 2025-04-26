@@ -10,10 +10,11 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
 - Fetch protein and/or nucleotide sequences from NCBI GenBank database.
 - Handles both direct nucleotide sequences and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
 - Support for both protein-coding and rDNA genes.
-- Single-taxid mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds are reduced (protein: 50aa, nucleotide: 100bp)).
+- Default "batch" mode processes multiple input taxa based on a user specified CSV file.
+- Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon, with default length thresholds reduced (protein: 50aa, nucleotide: 100bp).
 - Customisable length filtering thresholds for protein and nucleotide sequences.
-- Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. I.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
-- Validates fetched sequence using higher taxonomy, avoiding potential taxonomic homonyms.
+- Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. i.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
+- Validates fetched sequence using higher taxonomy, avoiding potential taxonomic homonyms (the same taxon name used for different taxa across the tree of life).
 - Robust error handling, error and progress logging, and NCBI API rate limits (10 requests/second).
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
 - 'Checkpointing': if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
@@ -65,11 +66,11 @@ python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <sampl
 * `i2/--in2`: Path to alternative input CSV file containing sample IDs and taxonomic information for each sample (see [Input](#input) section below).
 * `o/--out`: Path to output directory. The directory will be created if it does not exist.
 * `e/--email` and `-k/--api-key`: Email address and associated API key for NCBI account. An NCBI account is required to run this tool (due to otherwise strict API limitations) - information on how to create an NCBI account and find your API key can be found [here](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
-####= Optional arguments
-* `--protein_size`: Minimum protein sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 500).
-* `--nucleotide_size`: Minimum nucleotide sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 1500).
-* `s/--single`: Taxonomic ID for 'single-taxid' sequence search mode (`-i` and `-i2` ignored when run with `-s` mode). 'Single-taxid' mode will fetch all target gene or protein sequences on GenBank for a specific taxonomic ID.
-* `--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single-taxid' mode).
+### Optional arguments
+* `--protein_size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500).
+* `--nucleotide_size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1500).
+* `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` ignored when run with `-s` mode). 'single' mode will fetch all target gene or protein sequences on GenBank for a specific taxonomic ID.
+* `--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
 
 
 ## Examples
@@ -172,7 +173,7 @@ sbatch 1_gene_fetch.sh
 GeneFetch does function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the below targets. More targets can be added into script (see 'class config').
 - cox1/COI/cytochrome c oxidase subunit I
 - cox2/COII/cytochrome c oxidase subunit II
-- cox3/COIIIcytochrome c oxidase subunit III
+- cox3/COIII/cytochrome c oxidase subunit III
 - cytb/cob/cytochrome b
 - nd1/NAD1/NADH dehydrogenase subunit 1
 - nd2/NAD2/NADH dehydrogenase subunit 2
@@ -209,7 +210,7 @@ GeneFetch does function with other targets than those listed below, but it has h
 
 
 ## Contributions and citations
-GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2024).
+GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2025).
 
 If you use GeneFetch, please cite our publication: **XYZ()**
 
