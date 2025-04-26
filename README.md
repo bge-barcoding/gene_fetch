@@ -67,8 +67,8 @@ python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <sampl
 * `o/--out`: Path to output directory. The directory will be created if it does not exist.
 * `e/--email` and `-k/--api-key`: Email address and associated API key for NCBI account. An NCBI account is required to run this tool (due to otherwise strict API limitations) - information on how to create an NCBI account and find your API key can be found [here](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
 ### Optional arguments
-* `--protein_size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500).
-* `--nucleotide_size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1500).
+* `--protein-size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500).
+* `--nucleotide-size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1500).
 * `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` ignored when run with `-s` mode). 'single' mode will fetch all target gene or protein sequences on GenBank for a specific taxonomic ID.
 * `--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
 
@@ -85,14 +85,14 @@ Fetch rbcL nucleotide sequences using sample taxonomic information, applying a m
 ```
 python gene_fetch.py -e your.email@domain.com -k your_api_key \
                     -g rbcl -o ./output_dir -i2 ./taxonomy.csv \
-                    --type nucleotide --nucleotide_size 1000
+                    --type nucleotide --nucleotide-size 1000
 ```
 
 Retrieve 1000 available matK protein sequences >400aa for _Arabidopsis thaliana_ (taxid: 3702).
 ```
 python gene_fetch.py -e your.email@domain.com -k your_api_key \
                     -g matk -o ./output_dir -s 3702 \
-                    --type protein --protein_size 400 --max-sequences 1000
+                    --type protein --protein-size 400 --max-sequences 1000
 ```
 
 
