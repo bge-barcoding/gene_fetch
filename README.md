@@ -13,8 +13,8 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
 - Single-taxid mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds are reduced (protein: 50aa, nucleotide: 100bp)).
 - Customisable length filtering thresholds for protein and nucleotide sequences.
 - Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. I.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
-- Validates fetched sequence using higher taxonomy, avoiding potential taxonomic homonyms.
-- Robust error handling, error and progress logging, and NCBI API rate limits (10 requests/second).
+- Validates fetched sequences using higher taxonomy (when run with -i2), avoiding potential taxonomic homonyms.
+- Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second).
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
 - 'Checkpointing': if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
 - When more than 50 matching GenBank records are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders the records by sequence length, and processes the longest sequences first.
