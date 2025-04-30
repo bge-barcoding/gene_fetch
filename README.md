@@ -3,21 +3,23 @@
 </p>
 
 # GeneFetch 
-This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxids) or taxonomic information. It can retrieve both protein and nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
+This tool enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 
 ## Highlight features
 - Fetch protein and/or nucleotide sequences from NCBI GenBank database.
 - Handles both direct nucleotide sequences and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
 - Support for both protein-coding and rDNA genes.
-- Single-taxid mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds are reduced (protein: 50aa, nucleotide: 100bp)).
+- Default "batch" mode processes multiple input taxa based on a user specified CSV file.
+- Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon, with default length thresholds reduced (protein: 50aa, nucleotide: 100bp).
 - Customisable length filtering thresholds for protein and nucleotide sequences.
-- Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. I.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
-- Validates fetched sequence using higher taxonomy, avoiding potential taxonomic homonyms.
-- Robust error handling, error and progress logging, and NCBI API rate limits (10 requests/second).
+- Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. i.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
+- Taxonomic validation: validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxon name is used for different taxa across the tree of life).
+- Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second). Caches taxonomy lookups for reduced API calls.
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
 - 'Checkpointing': if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
 - When more than 50 matching GenBank records are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders the records by sequence length, and processes the longest sequences first.
+- Can output corresponding genbank (.gb) files for each fetched nucleotide and/or protein sequences
 
 ## Contents
  - [Installation](#installation)
@@ -65,19 +67,20 @@ python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <sampl
 * `i2/--in2`: Path to alternative input CSV file containing sample IDs and taxonomic information for each sample (see [Input](#input) section below).
 * `o/--out`: Path to output directory. The directory will be created if it does not exist.
 * `e/--email` and `-k/--api-key`: Email address and associated API key for NCBI account. An NCBI account is required to run this tool (due to otherwise strict API limitations) - information on how to create an NCBI account and find your API key can be found [here](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
-####= Optional arguments
-* `--protein_size`: Minimum protein sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 500).
-* `--nucleotide_size`: Minimum nucleotide sequence length filter. Applicable to mode 'normal' and 'single-taxid' search modes (default: 1500).
-* `s/--single`: Taxonomic ID for 'single-taxid' sequence search mode (`-i` and `-i2` ignored when run with `-s` mode). 'Single-taxid' mode will fetch all target gene or protein sequences on GenBank for a specific taxonomic ID.
-* `--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single-taxid' mode).
+### Optional arguments
+* `--protein-size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500).
+* `--nucleotide-size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1500).
+* `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` are ignored when run with `-s` mode). 'single' mode will fetch all (or N if specifying `--max-sequences`) target gene or protein sequences on GenBank for a specific taxonomic ID.
+* `--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
+* `-b/--genbank`: Saves genbank (.gb) files for fetched nucleotide and/or protein sequences to `genbank/` (applies when run in 'batch' or 'single' mode).
 
 
 ## Examples
-Fetch both protein and nucleotide sequences for COI with default sequence length thresholds.
+Fetch both protein and nucleotide sequences for COI with default sequence length thresholds, and store the corresponding genbank records.
 ```
 python gene_fetch.py -e your.email@domain.com -k your_api_key \
                     -g cox1 -o ./output_dir -i ./samples.csv \
-                    --type both
+                    --type both --genbank
 ```
 
 Fetch rbcL nucleotide sequences using sample taxonomic information, applying a minimum nucleotide sequence length of 1000bp
@@ -106,15 +109,16 @@ python gene_fetch.py -e your.email@domain.com -k your_api_key \
 **Example 'samples_taxonomy.csv' input file (-i2/--in2)**
 | ID | phylum | class | order | family | genus | species |
 | --- | --- | --- | --- | --- | --- | --- |
-| sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | Astomella hispaniae |
+| sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | n/a |
 | sample-2 | Arthropoda | Insecta | Hemiptera | Cicadellidae | Psammotettix | Psammotettix sabulicola |
 | sample-3 | Arthropoda | Insecta | Trichoptera | Limnephilidae | Dicosmoecus | Dicosmoecus palatus |
 
 
 ## Output
-### 'Normal' mode
+### 'Batch' mode
 ```
 output_dir/
+├── genbank/                    # Genbank (.gb) files for each fetched nucleotide and/or protein sequence.
 ├── nucleotide/                 # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
 │   ├── sample-1_dna.fasta   
 │   ├── sample-2_dna.fasta
@@ -134,9 +138,10 @@ output_dir/
 | sample-3 | 1876143 | YP_009526503.1 | 512 | NC_039659.1 | 1539 | genus:Triaenodes | Eukaryota; ...; Triaenodini; Triaenodes | sample-3 | abs/path/to/protein_references/sample-3.fasta | abs/path/to/protein_references/sample-3_dna.fasta |
 
 
-### 'Single-taxid' mode
+### 'Single' mode
 ```
 output_dir/
+├── genbank/                         # Genbank (.gb) files for each fetched nucleotide and/or protein sequence.
 ├── nucleotide/                      # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
 │   ├── ACCESSION1_dna.fasta   
 │   ├── ACCESSION2_dna.fasta
@@ -169,10 +174,10 @@ sbatch 1_gene_fetch.sh
 ```
 
 ## Supported targets
-GeneFetch does function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the below targets. More targets can be added into script (see 'class config').
+GeneFetch will function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the listed targets. More targets can be added into the script if necessary (see 'class config').
 - cox1/COI/cytochrome c oxidase subunit I
 - cox2/COII/cytochrome c oxidase subunit II
-- cox3/COIIIcytochrome c oxidase subunit III
+- cox3/COIII/cytochrome c oxidase subunit III
 - cytb/cob/cytochrome b
 - nd1/NAD1/NADH dehydrogenase subunit 1
 - nd2/NAD2/NADH dehydrogenase subunit 2
@@ -191,25 +196,23 @@ GeneFetch does function with other targets than those listed below, but it has h
 ## Benchmarking
 | Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time |
 |--------------------|----------|--------|------------|-----------|--------|------|----------|
-| 570 Arthropod samples | Normal | COX1 | taxonomy.csv | Both | 10G | 18 | 02:51:06 |
-| 570 Arthropod samples | Normal | COX1 | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
-| 570 Arthropod samples | Normal | COX1 | samples.csv | Protein | 5G | 4 | 01:50:31 |
-| 570 Arthropod samples | Normal | 18S | samples.csv | Nucleotide | 10G | 8 | 01:38:16 |
-| 570 Arthropod samples | Normal | ND1 | samples.csv | Nucleotide | 10G | 4 | 01:58:35 |
-| All (159) _A. thaliana_ sequences >300aa | Single-taxid | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
-| 1000 Culicidae sequences >500bp | Single-taxid | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
-| 1000 _M. tubercolisis_ sequences | Single-taxid | 16S | N/A | nucleotide | 20G | 16 | 00:10:33 |
+| 570 Arthropod samples | Batch | COX1 | taxonomy.csv | Both | 10G | 16 | 1:39:33 |
+| 570 Arthropod samples | Batch | COX1 | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
+| 570 Arthropod samples | Batch | COX1 | samples.csv | Protein | 5G | 4 | 01:50:31 |
+| 570 Arthropod samples | Batch | 18S | samples.csv | Nucleotide | 10G | 8 | 01:38:16 |
+| 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide | 10G | 4 | 01:58:35 |
+| All (159) _A. thaliana_ sequences >300aa | Single | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
+| 1000 Culicidae sequences >500bp | Single | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
+| 1000 _M. tubercolisis_ sequences | Single | 16S | N/A | nucleotide | 20G | 16 | 00:10:33 |
 
 ## Future Development
 - Add optional alignment of retrieved sequences
-- Add support for direct GenBank submission format output
-- Enhance LRU caching for taxonomy lookups to reduce API calls
 - Further improve efficiency of record searching and selecting the longest sequence
 - Add support for additional genetic markers beyond the currently supported set
 
 
 ## Contributions and citations
-GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2024).
+GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2025).
 
 If you use GeneFetch, please cite our publication: **XYZ()**
 
