@@ -1154,7 +1154,7 @@ class EntrezHandler:
                     else:
                         taxid = taxids[0]
                     
-                    logger.info(f"Confirmed taxid {taxid} for {phlyum} is valid given input taxonomy")
+                    logger.info(f"Confirmed taxid {taxid} for {phylum} is valid given input taxonomy")
                     return taxid
             except Exception as e:
                 logger.error(f"Error searching for phylum taxid: {e}")
@@ -2299,7 +2299,14 @@ class SequenceProcessor:
                         logger.info(f"Found {len(id_list)} protein records")
                         if len(id_list) > 5:  # Only log IDs if there are not too many
                             logger.info(f"Protein IDs: {id_list}")
-
+                        
+                        # Update progress_counters with actual total if in fetch_all mode
+                        if fetch_all and progress_counters:
+                            # If max_sequences is specified, use min(max_sequences, len(id_list))
+                            # Otherwise use actual number of sequences found
+                            total_sequences = min(max_sequences, len(id_list)) if max_sequences else len(id_list)
+                            progress_counters['total_sequences'] = total_sequences
+                        
                         # For non-fetch_all mode, apply prefiltering if there are many IDs
                         processed_ids = id_list
                         if not fetch_all and len(id_list) > 10:
@@ -2464,6 +2471,15 @@ class SequenceProcessor:
                                     # Update counter and log progress
                                     sequence_counter += 1
                                     if progress_counters:
+
+                                        progress_counters['sequence_counter'] = sequence_counter
+                                    
+                                    # Log progress with actual total sequences
+                                    total_to_use = progress_counters.get('total_sequences', max_sequences or len(id_list))
+                                    logger.info(f"====>>> Progress: {sequence_counter}/{total_to_use} sequences processed")
+                                    # Also print a direct progress line for the GUI to pick up
+                                    percentage = int(100 * sequence_counter / total_to_use)
+                                    print(f"progress: {percentage}%")
                                         progress_counters["sequence_counter"] = (
                                             sequence_counter
                                         )
@@ -2479,6 +2495,7 @@ class SequenceProcessor:
                                         logger.info(
                                             f"Progress: {sequence_counter}/{total_found} sequences processed"
                                         )
+
                                 else:
                                     # Keep only longest sequence
                                     if not protein_records or len(
@@ -2557,6 +2574,13 @@ class SequenceProcessor:
                         logger.info(f"Found {len(id_list)} nucleotide sequence IDs")
                         if len(id_list) > 5:  # Only log IDs if there are not too many
                             logger.debug(f"Nucleotide IDs: {id_list}")
+                        
+                        # Update the progress_counters with the actual total in fetch_all mode
+                        if fetch_all and progress_counters:
+                            # If max_sequences is specified, use min(max_sequences, len(id_list))
+                            # Otherwise use the actual number of sequences found
+                            total_sequences = min(max_sequences, len(id_list)) if max_sequences else len(id_list)
+                            progress_counters['total_sequences'] = total_sequences
 
                         # Apply the same prefiltering optimisation for nucleotide sequences
                         processed_ids = id_list
@@ -2704,6 +2728,15 @@ class SequenceProcessor:
                                                 # Update counter and log progress
                                                 sequence_counter += 1
                                                 if progress_counters:
+
+                                                    progress_counters['sequence_counter'] = sequence_counter
+                                                
+                                                # Log progress with actual total sequences
+                                                total_to_use = progress_counters.get('total_sequences', max_sequences or len(id_list))
+                                                logger.info(f"Progress: {sequence_counter}/{total_to_use} sequences processed")
+                                                # Also print a direct progress line for the GUI to pick up
+                                                percentage = int(100 * sequence_counter / total_to_use)
+                                                print(f"progress: {percentage}%")
                                                     progress_counters[
                                                         "sequence_counter"
                                                     ] = sequence_counter
@@ -2719,6 +2752,7 @@ class SequenceProcessor:
                                                     logger.info(
                                                         f"Progress: {sequence_counter}/{total_found} sequences processed"
                                                     )
+
                                             else:
                                                 # Keep only longest rRNA
                                                 if not nucleotide_records or len(
@@ -2769,6 +2803,15 @@ class SequenceProcessor:
                                                 # Update counter and log progress
                                                 sequence_counter += 1
                                                 if progress_counters:
+
+                                                    progress_counters['sequence_counter'] = sequence_counter
+                                                
+                                                # Log progress with actual total sequences
+                                                total_to_use = progress_counters.get('total_sequences', max_sequences or len(id_list))
+                                                logger.info(f"Progress: {sequence_counter}/{total_to_use} sequences processed")
+                                                # Also print a direct progress line for the GUI to pick up
+                                                percentage = int(100 * sequence_counter / total_to_use)
+                                                print(f"progress: {percentage}%")
                                                     progress_counters[
                                                         "sequence_counter"
                                                     ] = sequence_counter
@@ -2784,6 +2827,7 @@ class SequenceProcessor:
                                                     logger.info(
                                                         f"Progress: {sequence_counter}/{total_found} sequences processed"
                                                     )
+
                                             else:
                                                 # Keep only longest CDS
                                                 if not nucleotide_records or len(
@@ -2831,6 +2875,9 @@ class SequenceProcessor:
             logger.error(f"Error in try_fetch_at_taxid for taxid {current_taxid}: {e}")
             logger.error("Full error details:", exc_info=True)
 
+
+        return protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_records, nucleotide_records
+    
         return (
             protein_found,
             nucleotide_found,
