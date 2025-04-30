@@ -3,7 +3,7 @@
 </p>
 
 # GeneFetch 
-This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxids) or taxonomic information. It can retrieve both protein and nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
+This tool enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 
 ## Highlight features
@@ -14,12 +14,12 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
 - Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon, with default length thresholds reduced (protein: 50aa, nucleotide: 100bp).
 - Customisable length filtering thresholds for protein and nucleotide sequences.
 - Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. i.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
-- Validates fetched sequence using higher taxonomy, avoiding potential taxonomic homonyms (the same taxon name used for different taxa across the tree of life).
-- Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second).
+- Taxonomic validation: validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxon name is used for different taxa across the tree of life).
+- Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second). Caches taxonomy lookups for reduced API calls.
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
 - 'Checkpointing': if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
 - When more than 50 matching GenBank records are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders the records by sequence length, and processes the longest sequences first.
-- Optional `-b/--genbank` argument will fetch the genbank entries for fetched nucleotide and/or protein sequences. Works with both 'batch' and 'single' taxid modes.
+- Can output corresponding genbank (.gb) files for each fetched nucleotide and/or protein sequences
 
 ## Contents
  - [Installation](#installation)
@@ -109,7 +109,7 @@ python gene_fetch.py -e your.email@domain.com -k your_api_key \
 **Example 'samples_taxonomy.csv' input file (-i2/--in2)**
 | ID | phylum | class | order | family | genus | species |
 | --- | --- | --- | --- | --- | --- | --- |
-| sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | Astomella hispaniae |
+| sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | n/a |
 | sample-2 | Arthropoda | Insecta | Hemiptera | Cicadellidae | Psammotettix | Psammotettix sabulicola |
 | sample-3 | Arthropoda | Insecta | Trichoptera | Limnephilidae | Dicosmoecus | Dicosmoecus palatus |
 
@@ -174,7 +174,7 @@ sbatch 1_gene_fetch.sh
 ```
 
 ## Supported targets
-GeneFetch does function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the below targets. More targets can be added into script (see 'class config').
+GeneFetch will function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the listed targets. More targets can be added into the script if necessary (see 'class config').
 - cox1/COI/cytochrome c oxidase subunit I
 - cox2/COII/cytochrome c oxidase subunit II
 - cox3/COIII/cytochrome c oxidase subunit III
@@ -196,7 +196,7 @@ GeneFetch does function with other targets than those listed below, but it has h
 ## Benchmarking
 | Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time |
 |--------------------|----------|--------|------------|-----------|--------|------|----------|
-| 570 Arthropod samples | Batch | COX1 | taxonomy.csv | Both | 10G | 18 | 02:51:06 |
+| 570 Arthropod samples | Batch | COX1 | taxonomy.csv | Both | 10G | 16 | 1:39:33 |
 | 570 Arthropod samples | Batch | COX1 | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
 | 570 Arthropod samples | Batch | COX1 | samples.csv | Protein | 5G | 4 | 01:50:31 |
 | 570 Arthropod samples | Batch | 18S | samples.csv | Nucleotide | 10G | 8 | 01:38:16 |
@@ -207,7 +207,6 @@ GeneFetch does function with other targets than those listed below, but it has h
 
 ## Future Development
 - Add optional alignment of retrieved sequences
-- Enhance LRU caching for taxonomy lookups to reduce API calls
 - Further improve efficiency of record searching and selecting the longest sequence
 - Add support for additional genetic markers beyond the currently supported set
 
