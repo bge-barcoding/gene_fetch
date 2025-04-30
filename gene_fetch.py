@@ -2480,7 +2480,8 @@ class SequenceProcessor:
                                     # Also print a direct progress line for the GUI to pick up
                                     percentage = int(100 * sequence_counter / total_to_use)
                                     print(f"progress: {percentage}%")
-                                        progress_counters["sequence_counter"] = (
+
+                                    progress_counters["sequence_counter"] = (
                                             sequence_counter
                                         )
 
@@ -2737,7 +2738,8 @@ class SequenceProcessor:
                                                 # Also print a direct progress line for the GUI to pick up
                                                 percentage = int(100 * sequence_counter / total_to_use)
                                                 print(f"progress: {percentage}%")
-                                                    progress_counters[
+                                                
+                                                progress_counters[
                                                         "sequence_counter"
                                                     ] = sequence_counter
 
@@ -2812,7 +2814,8 @@ class SequenceProcessor:
                                                 # Also print a direct progress line for the GUI to pick up
                                                 percentage = int(100 * sequence_counter / total_to_use)
                                                 print(f"progress: {percentage}%")
-                                                    progress_counters[
+
+                                                progress_counters[
                                                         "sequence_counter"
                                                     ] = sequence_counter
 
@@ -3899,7 +3902,7 @@ def main():
         sys.exit(1)
 
     logger.info("***********************************************************")
-    logger.info("              ✌ ✌ ✌ Gene fetch complete ✌ ✌ ✌     ")
+    logger.info("              ! ! ! Gene fetch complete ! ! !              ")
     logger.info("***********************************************************")
 
 
