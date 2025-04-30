@@ -19,6 +19,7 @@ This tool fetches gene sequences from NCBI databases based on taxonomy IDs (taxi
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
 - 'Checkpointing': if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
 - When more than 50 matching GenBank records are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders the records by sequence length, and processes the longest sequences first.
+- Optional `-b/--genbank` argument will fetch the genbank entries for fetched nucleotide and/or protein sequences. Works with both 'batch' and 'single' taxid modes.
 
 ## Contents
  - [Installation](#installation)
@@ -69,16 +70,17 @@ python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <sampl
 ### Optional arguments
 * `--protein-size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500).
 * `--nucleotide-size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1500).
-* `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` ignored when run with `-s` mode). 'single' mode will fetch all target gene or protein sequences on GenBank for a specific taxonomic ID.
+* `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` are ignored when run with `-s` mode). 'single' mode will fetch all (or N if specifying `--max-sequences`) target gene or protein sequences on GenBank for a specific taxonomic ID.
 * `--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
+* `-b/--genbank`: Saves genbank (.gb) files for fetched nucleotide and/or protein sequences to `genbank/` (applies when run in 'batch' or 'single' mode).
 
 
 ## Examples
-Fetch both protein and nucleotide sequences for COI with default sequence length thresholds.
+Fetch both protein and nucleotide sequences for COI with default sequence length thresholds, and store the corresponding genbank records.
 ```
 python gene_fetch.py -e your.email@domain.com -k your_api_key \
                     -g cox1 -o ./output_dir -i ./samples.csv \
-                    --type both
+                    --type both --genbank
 ```
 
 Fetch rbcL nucleotide sequences using sample taxonomic information, applying a minimum nucleotide sequence length of 1000bp
@@ -116,6 +118,7 @@ python gene_fetch.py -e your.email@domain.com -k your_api_key \
 ### 'Batch' mode
 ```
 output_dir/
+├── genbank/                    # Genbank (.gb) files for each fetched nucleotide and/or protein sequence.
 ├── nucleotide/                 # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
 │   ├── sample-1_dna.fasta   
 │   ├── sample-2_dna.fasta
@@ -138,6 +141,7 @@ output_dir/
 ### 'Single' mode
 ```
 output_dir/
+├── genbank/                         # Genbank (.gb) files for each fetched nucleotide and/or protein sequence.
 ├── nucleotide/                      # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
 │   ├── ACCESSION1_dna.fasta   
 │   ├── ACCESSION2_dna.fasta
