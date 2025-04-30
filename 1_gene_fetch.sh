@@ -8,7 +8,7 @@
 
 
 
-#activate conda env
+# Activate conda environment
 source ~/miniconda3/etc/profile.d/conda.sh
 conda init bash
 conda activate fetch
@@ -21,19 +21,20 @@ API_KEY= XYZ
 GENE=cox1
 TYPE=both
 
-#MIN_PROT_SIZE=
-#MIN_NUC_Size=
-#MAX_SEQS=
-
 # Input and output directory paths
 SAMPLES_CSV=path/to/input/samples.csv
 #TAXONOMY_CSV=path/ti/input/samples_taxonomy.csv
 
 OUTPUT_DIR=path/to/out/dir
 
+# Optional filtering thresholds
+#MIN_PROT_SIZE=
+#MIN_NUC_Size=
+#MAX_SEQS=
+
 
 # Run gene_fetch.py
-python 1_gene_fetch.py \
+python gene_fetch.py \
 	$GENE \
 	$OUTPUT_DIR \
 	$SAMPLES_CSV \
