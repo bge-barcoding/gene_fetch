@@ -63,7 +63,7 @@ Future Development:
 - Add support for additional genetic markers beyond the currently supported set
 
 Author: D. Parsons
-Version: 1.0
+Version: 1.1
 License: MIT
 """
 
