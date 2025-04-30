@@ -197,7 +197,7 @@ GeneFetch will function with other targets than those listed below, but it has h
 | Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time |
 |--------------------|----------|--------|------------|-----------|--------|------|----------|
 | 570 Arthropod samples | Batch | COX1 | taxonomy.csv | Both | 10G | 16 | 1:39:33 |
-| 570 Arthropod samples | Batch | COX1 | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
+| 570 Arthropod samples | Batch | COX1 | samples.csv | Both | 10G | 16 | 1:48:38 |
 | 570 Arthropod samples | Batch | COX1 | samples.csv | Protein | 5G | 4 | 01:50:31 |
 | 570 Arthropod samples | Batch | 18S | samples.csv | Nucleotide | 10G | 8 | 01:38:16 |
 | 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide | 10G | 4 | 01:58:35 |
