@@ -289,9 +289,7 @@ def enhanced_retry(
 
                     # Add jitter to avoid thundering herd
                     delay_with_jitter = mdelay + uniform(-0.1 * mdelay, 0.1 * mdelay)
-                    logger.warning(
-                        f"{str(e)}, Retrying in {delay_with_jitter:.2f} " f"seconds..."
-                    )
+                    logger.warning(f"{str(e)}, Retrying in {delay_with_jitter:.2f} " f"seconds...")
                     sleep(delay_with_jitter)
 
                     # Progressive backoff
@@ -806,8 +804,7 @@ class EntrezHandler:
                                 delay = (attempt + 1) * 2  # Progressive delay
                                 logger.warning(
                                     f"HTTP 400 error for taxID {taxid}, attempt "
-                                    f"{attempt + 1}/{max_retries}. Retrying in "
-                                    f"{delay} seconds..."
+                                    f"{attempt + 1}/{max_retries}. Retrying in {delay} seconds... "
                                 )
                                 sleep(delay)
                                 continue
@@ -1154,7 +1151,7 @@ class EntrezHandler:
                     else:
                         taxid = taxids[0]
                     
-                    logger.info(f"Confirmed taxid {taxid} for {phlyum} is valid given input taxonomy")
+                    logger.info(f"Confirmed taxid {taxid} for {phylum} is valid given input taxonomy")
                     return taxid
             except Exception as e:
                 logger.error(f"Error searching for phylum taxid: {e}")
@@ -2299,6 +2296,13 @@ class SequenceProcessor:
                         logger.info(f"Found {len(id_list)} protein records")
                         if len(id_list) > 5:  # Only log IDs if there are not too many
                             logger.info(f"Protein IDs: {id_list}")
+
+                        # Update the progress_counters with actual total if in fetch_all mode
+                        if fetch_all and progress_counters:
+                            # If max_sequences specified, use min(max_sequences, len(id_list))
+                            # Otherwise use the actual number of sequences found
+                            total_sequences = min(max_sequences, len(id_list)) if max_sequences else len(id_list)
+                            progress_counters['total_sequences'] = total_sequences
 
                         # For non-fetch_all mode, apply prefiltering if there are many IDs
                         processed_ids = id_list
@@ -3851,9 +3855,9 @@ def main():
         logger.error(str(e))
         sys.exit(1)
 
-    logger.info("**********************************************************")
-    logger.info("           ? ?? ? Gene fetch complete ? ?? ?           ")
-    logger.info("**********************************************************")
+    logger.info("***********************************************************")
+    logger.info("              ! ! ! Gene fetch complete ! ! !              ")
+    logger.info("***********************************************************")
 
 
 if __name__ == "__main__":
