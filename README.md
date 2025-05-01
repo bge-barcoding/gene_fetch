@@ -196,11 +196,12 @@ GeneFetch will function with other targets than those listed below, but it has h
 ## Benchmarking
 | Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time |
 |--------------------|----------|--------|------------|-----------|--------|------|----------|
-| 570 Arthropod samples | Batch | COX1 | taxonomy.csv | Both | 10G | 16 | 1:39:33 |
-| 570 Arthropod samples | Batch | COX1 | samples.csv | Nucleotide | 5G | 4 | 02:04:01 |
-| 570 Arthropod samples | Batch | COX1 | samples.csv | Protein | 5G | 4 | 01:50:31 |
-| 570 Arthropod samples | Batch | 18S | samples.csv | Nucleotide | 10G | 8 | 01:38:16 |
-| 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide | 10G | 4 | 01:58:35 |
+| 570 Arthropod samples | Batch | COI | taxonomy.csv | Both | 4G | 1 | X:X:X |
+| 570 Arthropod samples | Batch | COI | samples.csv | Both (+ genbank) | 4G | 1 | X:X:X |
+| 570 Arthropod samples | Batch | COI | samples.csv | Nucleotide | 4G | 1 | X:X:X |
+
+| 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide (>500bp) | 4G | 1 | X:X:X |
+
 | All (159) _A. thaliana_ sequences >300aa | Single | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
 | 1000 Culicidae sequences >500bp | Single | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
 | 1000 _M. tubercolisis_ sequences | Single | 16S | N/A | nucleotide | 20G | 16 | 00:10:33 |
