@@ -200,7 +200,7 @@ GeneFetch will function with other targets than those listed below, but it has h
 | 570 Arthropod samples | Batch | COI | samples.csv | Both (+ genbank) | 4G | 1 | X:X:X |
 | 570 Arthropod samples | Batch | COI | samples.csv | Nucleotide | 4G | 1 | X:X:X |
 
-| 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide (>500bp) | 4G | 1 | X:X:X |
+| 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide (>500bp) | 4G | 1 | 1:23:26 |
 
 | All (159) _A. thaliana_ sequences >300aa | Single | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
 | 1000 Culicidae sequences >500bp | Single | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
