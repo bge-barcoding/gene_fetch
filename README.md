@@ -197,7 +197,7 @@ GeneFetch will function with other targets than those listed below, but it has h
 | Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time (hh:mm:ss) |
 |--------------------|----------|--------|------------|-----------|--------|------|----------|
 | 570 Arthropod samples | Batch | COI | taxonomy.csv | Both | 4G | 1 | X:X:X |
-| 570 Arthropod samples | Batch | COI | samples.csv | Both (+ genbank) | 4G | 1 | X:X:X |
+| 570 Arthropod samples | Batch | COI | samples.csv | Both (+ genbank) | 4G | 1 | 01:42:37 |
 | 570 Arthropod samples | Batch | COI | samples.csv | Nucleotide | 4G | 1 | 1:07:53  |
 | 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide (>500bp) | 4G | 1 | 1:23:26 |
 | All available (30) _A. thaliana_ sequences | Single | rbcL | N/A | Protein (>300aa) | 4G | 1 | 00:00:25 |
