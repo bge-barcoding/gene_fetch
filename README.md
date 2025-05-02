@@ -87,14 +87,14 @@ Fetch rbcL nucleotide sequences using sample taxonomic information, applying a m
 ```
 python gene_fetch.py -e your.email@domain.com -k your_api_key \
                     -g rbcl -o ./output_dir -i2 ./taxonomy.csv \
-                    --type nucleotide --nucleotide_size 1000
+                    --type nucleotide --nucleotide-size 1000
 ```
 
 Retrieve 1000 available matK protein sequences >400aa for _Arabidopsis thaliana_ (taxid: 3702).
 ```
 python gene_fetch.py -e your.email@domain.com -k your_api_key \
                     -g matk -o ./output_dir -s 3702 \
-                    --type protein --protein_size 400 --max-sequences 1000
+                    --type protein --protein-size 400 --max-sequences 1000
 ```
 
 
