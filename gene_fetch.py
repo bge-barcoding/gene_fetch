@@ -57,13 +57,10 @@ Usage:
 
 Future Development:
 - Add optional alignment of retrieved sequences
-- Add support for direct GenBank submission format output
-- Enhance LRU caching for taxonomy lookups to reduce API calls
-- Improve efficiency of record searching and selecting the longest sequence
 - Add support for additional genetic markers beyond the currently supported set
 
-Author: D. Parsons
-Version: 1.1
+Author: D. Parsons & B. Price @ NHMUK
+Version: 1.0
 License: MIT
 """
 
@@ -178,7 +175,7 @@ def setup_argument_parser():
         help="Maximum number of sequences to fetch in single mode (only works "
         "with -s/--single)",
     )
-    
+
     # Add new argument for GenBank file downloads
     parser.add_argument(
         "-b",
@@ -289,7 +286,9 @@ def enhanced_retry(
 
                     # Add jitter to avoid thundering herd
                     delay_with_jitter = mdelay + uniform(-0.1 * mdelay, 0.1 * mdelay)
-                    logger.warning(f"{str(e)}, Retrying in {delay_with_jitter:.2f} " f"seconds...")
+                    logger.warning(
+                        f"{str(e)}, Retrying in {delay_with_jitter:.2f} " f"seconds..."
+                    )
                     sleep(delay_with_jitter)
 
                     # Progressive backoff
@@ -675,7 +674,9 @@ class EntrezHandler:
         self.service_check_interval = 60  # Seconds between service checks
 
         # Creating cache for fetched NCBI taxonomy
-        self.taxonomy_cache = {}  # taxid -> (complete_lineage, rank_info, current_rank, taxid_info)
+        self.taxonomy_cache = (
+            {}
+        )  # taxid -> (complete_lineage, rank_info, current_rank, taxid_info)
 
     # Determine if service status check is needed
     def should_check_service_status(self) -> bool:
@@ -754,130 +755,138 @@ class EntrezHandler:
         # Return modified result with all IDs
         initial_result["IdList"] = all_ids
         return initial_result
-        
+
         # Fetch taxonomy information for a given taxid
+
     @enhanced_retry(
         (HTTPError, RuntimeError, IOError, IncompleteRead),
         tries=5,
         initial_delay=15,
     )
     def fetch_taxonomy(
-            self, taxid: str
-        ) -> Tuple[List[str], Dict[str, str], str, Dict[str, str]]:
-            # Check cache first
-            if taxid in self.taxonomy_cache:
-                logger.info(f"Using cached taxonomy for taxID: {taxid}")  
-                return self.taxonomy_cache[taxid]
-            
-            logger.info(f"Retrieving taxonomy details from NCBI for taxID: {taxid}")
-            
-            # First verify taxid format
-            taxid = taxid.strip()
-            if not taxid.isdigit():
-                logger.error(f"Invalid taxID format: {taxid} (must be numerical)")
-                return [], {}, "", {}
+        self, taxid: str
+    ) -> Tuple[List[str], Dict[str, str], str, Dict[str, str]]:
+        # Check cache first
+        if taxid in self.taxonomy_cache:
+            logger.info(f"Using cached taxonomy for taxID: {taxid}")
+            return self.taxonomy_cache[taxid]
 
-            # Add initial delay to help avoid rate limiting
-            sleep(uniform(0.5, 1.0))
+        logger.info(f"Retrieving taxonomy details from NCBI for taxID: {taxid}")
 
-            try:
-                # Set up parameters for the request
-                params = {
-                    "db": "taxonomy",
-                    "id": taxid,
-                    "email": self.config.email,
-                    "api_key": self.config.api_key,
-                    "tool": "gene_fetch",
-                }
+        # First verify taxid format
+        taxid = taxid.strip()
+        if not taxid.isdigit():
+            logger.error(f"Invalid taxID format: {taxid} (must be numerical)")
+            return [], {}, "", {}
 
-                max_retries = 3
-                for attempt in range(max_retries):
-                    try:
-                        handle = self.fetch(**params)
-                        records = Entrez.read(handle)
-                        handle.close()
-                        break  # If successful, exit retry loop
-                    # Deal with spurious HTTP 400 errors
-                    except HTTPError as e:
-                        if e.code == 400:
-                            if attempt < max_retries - 1:  # If not the last attempt
-                                delay = (attempt + 1) * 2  # Progressive delay
-                                logger.warning(
-                                    f"HTTP 400 error for taxID {taxid}, attempt "
-                                    f"{attempt + 1}/{max_retries}. Retrying in {delay} seconds... "
-                                )
-                                sleep(delay)
-                                continue
-                            else:
-                                logger.error(
-                                    f"Failed to fetch taxonomy after {max_retries} "
-                                    f"attempts for taxID {taxid}"
-                                )
-                                return [], {}, "", {}
+        # Add initial delay to help avoid rate limiting
+        sleep(uniform(0.5, 1.0))
+
+        try:
+            # Set up parameters for the request
+            params = {
+                "db": "taxonomy",
+                "id": taxid,
+                "email": self.config.email,
+                "api_key": self.config.api_key,
+                "tool": "gene_fetch",
+            }
+
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    handle = self.fetch(**params)
+                    records = Entrez.read(handle)
+                    handle.close()
+                    break  # If successful, exit retry loop
+                # Deal with spurious HTTP 400 errors
+                except HTTPError as e:
+                    if e.code == 400:
+                        if attempt < max_retries - 1:  # If not the last attempt
+                            delay = (attempt + 1) * 2  # Progressive delay
+                            logger.warning(
+                                f"HTTP 400 error for taxID {taxid}, attempt "
+                                f"{attempt + 1}/{max_retries}. Retrying in {delay} seconds... "
+                            )
+                            sleep(delay)
+                            continue
                         else:
-                            raise  # Re-raise other HTTP errors
-                else:  # If all retries exhausted
-                    return [], {}, "", {}
-
-                if not records:
-                    logger.error(f"No taxonomy records found for taxID {taxid}")
-                    return [], {}, "", {}
-
-                # Get the first record
-                record = records[0]
-
-                # Initialise rank information dictionaries
-                rank_info = {}
-                taxid_info = {}
-
-                lineage_nodes = record.get("LineageEx", [])
-                lineage = []
-
-                # Process lineage nodes
-                for node in lineage_nodes:
-                    name = node.get("ScientificName", "")
-                    rank = node.get("Rank", "no rank")
-                    node_taxid = str(node.get("TaxId", ""))
-
-                    # Add to lineage
-                    lineage.append(name)
-
-                    # Add rank and taxid info if valid
-                    if name and rank != "no rank":
-                        rank_info[name] = rank
-                        taxid_info[name] = node_taxid
-
-                # Get current taxon information
-                current_name = record.get("ScientificName", "")
-                current_rank = record.get("Rank", "no rank")
-
-                # Add current taxon to complete lineage
-                complete_lineage = lineage + [current_name]
-
-                if current_rank != "no rank":
-                    rank_info[current_name] = current_rank
-                    taxid_info[current_name] = taxid
-
-                logger.info(f"Successfully retrieved taxonomy information from NCBI for taxID: {taxid}")
-                logger.debug(f"Lineage: {complete_lineage}")
-                logger.debug(f"Rank info: {rank_info}")
-
-                # Store taxonomy in cache
-                self.taxonomy_cache[taxid] = (complete_lineage, rank_info, current_rank, taxid_info)
-
-                return complete_lineage, rank_info, current_rank, taxid_info
-
-            except IncompleteRead as e:
-                logger.warning(f"IncompleteRead error for taxID {taxid}: {e}")
-                # Re-raise to allow the retry decorator to handle it
-                raise
-            except Exception as e:
-                if isinstance(e, HTTPError) and e.code == 400:
-                    logger.error(f"HTTP 400 error for taxID {taxid}, skipping for now")
-                else:
-                    logger.error(f"Error fetching taxonomy for taxID {taxid}: {e}")
-                    logger.error("Full error details:", exc_info=True)
+                            logger.error(
+                                f"Failed to fetch taxonomy after {max_retries} "
+                                f"attempts for taxID {taxid}"
+                            )
+                            return [], {}, "", {}
+                    else:
+                        raise  # Re-raise other HTTP errors
+            else:  # If all retries exhausted
                 return [], {}, "", {}
+
+            if not records:
+                logger.error(f"No taxonomy records found for taxID {taxid}")
+                return [], {}, "", {}
+
+            # Get the first record
+            record = records[0]
+
+            # Initialise rank information dictionaries
+            rank_info = {}
+            taxid_info = {}
+
+            lineage_nodes = record.get("LineageEx", [])
+            lineage = []
+
+            # Process lineage nodes
+            for node in lineage_nodes:
+                name = node.get("ScientificName", "")
+                rank = node.get("Rank", "no rank")
+                node_taxid = str(node.get("TaxId", ""))
+
+                # Add to lineage
+                lineage.append(name)
+
+                # Add rank and taxid info if valid
+                if name and rank != "no rank":
+                    rank_info[name] = rank
+                    taxid_info[name] = node_taxid
+
+            # Get current taxon information
+            current_name = record.get("ScientificName", "")
+            current_rank = record.get("Rank", "no rank")
+
+            # Add current taxon to complete lineage
+            complete_lineage = lineage + [current_name]
+
+            if current_rank != "no rank":
+                rank_info[current_name] = current_rank
+                taxid_info[current_name] = taxid
+
+            logger.info(
+                f"Successfully retrieved taxonomy information from NCBI for taxID: {taxid}"
+            )
+            logger.debug(f"Lineage: {complete_lineage}")
+            logger.debug(f"Rank info: {rank_info}")
+
+            # Store taxonomy in cache
+            self.taxonomy_cache[taxid] = (
+                complete_lineage,
+                rank_info,
+                current_rank,
+                taxid_info,
+            )
+
+            return complete_lineage, rank_info, current_rank, taxid_info
+
+        except IncompleteRead as e:
+            logger.warning(f"IncompleteRead error for taxID {taxid}: {e}")
+            # Re-raise to allow the retry decorator to handle it
+            raise
+        except Exception as e:
+            if isinstance(e, HTTPError) and e.code == 400:
+                logger.error(f"HTTP 400 error for taxID {taxid}, skipping for now")
+            else:
+                logger.error(f"Error fetching taxonomy for taxID {taxid}: {e}")
+                logger.error("Full error details:", exc_info=True)
+            return [], {}, "", {}
 
     # Fetch NCBI taxID from input hierarchical taxonomic information
     # Conducts progressive search from most specific level -> phylum
@@ -890,7 +899,7 @@ class EntrezHandler:
             f"Attempting to fetch taxid for Species: {species}, Genus: {genus},"
             f"Family: {family}, Order: {order}, Class: {class_name}, Phylum: {phylum})"
         )
-        
+
         # Store the provided taxonomy for validation
         provided_taxonomy = {
             "phylum": phylum.strip() if phylum else "",
@@ -898,9 +907,9 @@ class EntrezHandler:
             "order": order.strip() if order else "",
             "family": family.strip() if family else "",
             "genus": genus.strip() if genus else "",
-            "species": species.strip() if species else ""
+            "species": species.strip() if species else "",
         }
-        
+
         # Try species level first, and validate
         if genus and species:
             # Check if species already contains genus name to avoid duplication
@@ -910,46 +919,64 @@ class EntrezHandler:
             else:
                 # Combine genus and species for the full species name
                 full_species = f"{genus} {species}"
-                
+
             search_term = f"{full_species}[Scientific Name]"
             logger.info(f"Searching for species: {search_term}")
             try:
                 result = self.search(db="taxonomy", term=search_term)
                 if result and result.get("IdList") and len(result["IdList"]) > 0:
                     taxids = result["IdList"]
-                    
+
                     # Check for multiple matches
                     if len(taxids) > 1:
-                        logger.warning(f"Multiple taxids found for species {full_species}: {taxids}")
-                        
+                        logger.warning(
+                            f"Multiple taxids found for species {full_species}: {taxids}"
+                        )
+
                         # Validate fetched taxids against the input taxonomy
                         valid_taxids = []
                         for taxid in taxids:
-                            is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                            is_valid, lineage = self.validate_taxonomy_consistency(
+                                taxid, provided_taxonomy
+                            )
                             if is_valid:
                                 valid_taxids.append((taxid, lineage))
-                        
+
                         if not valid_taxids:
-                            logger.warning(f"None of the taxids for {full_species} match the provided higher taxonomy")
+                            logger.warning(
+                                f"None of the taxids for {full_species} match the provided higher taxonomy"
+                            )
                             # Continue to next level
                         elif len(valid_taxids) == 1:
                             taxid = valid_taxids[0][0]
-                            logger.info(f"Found single valid taxid ({taxid}) for species {full_species}")
+                            logger.info(
+                                f"Found single valid taxid ({taxid}) for species {full_species}"
+                            )
                             return taxid
                         else:
                             # Multiple valid taxids - take the one with most matching higher taxonomy
-                            best_taxid = max(valid_taxids, key=lambda x: x[1]['match_score'])[0]
-                            logger.warning(f"Multiple valid taxids for {full_species}, using best match: {best_taxid}")
+                            best_taxid = max(
+                                valid_taxids, key=lambda x: x[1]["match_score"]
+                            )[0]
+                            logger.warning(
+                                f"Multiple valid taxids for {full_species}, using best match: {best_taxid}"
+                            )
                             return best_taxid
                     else:
                         # Single match - still validate
                         taxid = taxids[0]
-                        is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                        is_valid, lineage = self.validate_taxonomy_consistency(
+                            taxid, provided_taxonomy
+                        )
                         if is_valid:
-                            logger.info(f"Found taxid ({taxid}) for species {full_species}")
+                            logger.info(
+                                f"Found taxid ({taxid}) for species {full_species}"
+                            )
                             return taxid
                         else:
-                            logger.warning(f"Taxid {taxid} for {full_species} does not match the provided higher taxonomy")
+                            logger.warning(
+                                f"Taxid {taxid} for {full_species} does not match the provided higher taxonomy"
+                            )
                             # Continue to next level
             except Exception as e:
                 logger.error(f"Error searching for species taxid: {e}")
@@ -962,39 +989,57 @@ class EntrezHandler:
                 result = self.search(db="taxonomy", term=search_term)
                 if result and result.get("IdList") and len(result["IdList"]) > 0:
                     taxids = result["IdList"]
-                    
+
                     # Check for multiple matches
                     if len(taxids) > 1:
-                        logger.warning(f"Multiple taxids found for genus {genus}: {taxids}")
-                        
+                        logger.warning(
+                            f"Multiple taxids found for genus {genus}: {taxids}"
+                        )
+
                         # Validate each taxid against the provided taxonomy
                         valid_taxids = []
                         for taxid in taxids:
-                            is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                            is_valid, lineage = self.validate_taxonomy_consistency(
+                                taxid, provided_taxonomy
+                            )
                             if is_valid:
                                 valid_taxids.append((taxid, lineage))
-                        
+
                         if not valid_taxids:
-                            logger.warning(f"None of the taxids for genus {genus} match the provided higher taxonomy")
+                            logger.warning(
+                                f"None of the taxids for genus {genus} match the provided higher taxonomy"
+                            )
                             # Continue to next level
                         elif len(valid_taxids) == 1:
                             taxid = valid_taxids[0][0]
-                            logger.info(f"Found single valid taxid ({taxid}) for genus {genus}")
+                            logger.info(
+                                f"Found single valid taxid ({taxid}) for genus {genus}"
+                            )
                             return taxid
                         else:
                             # Multiple valid taxids - take the one with most matching higher taxonomy
-                            best_taxid = max(valid_taxids, key=lambda x: x[1]['match_score'])[0]
-                            logger.warning(f"Multiple valid taxids for genus {genus}, using best match: {best_taxid}")
+                            best_taxid = max(
+                                valid_taxids, key=lambda x: x[1]["match_score"]
+                            )[0]
+                            logger.warning(
+                                f"Multiple valid taxids for genus {genus}, using best match: {best_taxid}"
+                            )
                             return best_taxid
                     else:
                         # Single match - still validate
                         taxid = taxids[0]
-                        is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                        is_valid, lineage = self.validate_taxonomy_consistency(
+                            taxid, provided_taxonomy
+                        )
                         if is_valid:
-                            logger.info(f"Confirmed taxid {taxid} for {genus} is valid given input taxonomy")
+                            logger.info(
+                                f"Confirmed taxid {taxid} for {genus} is valid given input taxonomy"
+                            )
                             return taxid
                         else:
-                            logger.warning(f"Taxonomic mismatch for taxid {taxid}, it does not match the input higher taxonomy")
+                            logger.warning(
+                                f"Taxonomic mismatch for taxid {taxid}, it does not match the input higher taxonomy"
+                            )
                             # Continue to next level
             except Exception as e:
                 logger.error(f"Error searching for genus taxid: {e}")
@@ -1007,39 +1052,57 @@ class EntrezHandler:
                 result = self.search(db="taxonomy", term=search_term)
                 if result and result.get("IdList") and len(result["IdList"]) > 0:
                     taxids = result["IdList"]
-                    
+
                     # Check for multiple matches
                     if len(taxids) > 1:
-                        logger.warning(f"Multiple taxids found for family {family}: {taxids}")
-                        
+                        logger.warning(
+                            f"Multiple taxids found for family {family}: {taxids}"
+                        )
+
                         # Validate each taxid against the provided taxonomy
                         valid_taxids = []
                         for taxid in taxids:
-                            is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                            is_valid, lineage = self.validate_taxonomy_consistency(
+                                taxid, provided_taxonomy
+                            )
                             if is_valid:
                                 valid_taxids.append((taxid, lineage))
-                        
+
                         if not valid_taxids:
-                            logger.warning(f"None of the taxids for family {family} match the provided higher taxonomy")
+                            logger.warning(
+                                f"None of the taxids for family {family} match the provided higher taxonomy"
+                            )
                             # Continue to next level
                         elif len(valid_taxids) == 1:
                             taxid = valid_taxids[0][0]
-                            logger.info(f"Found single valid taxid ({taxid}) for family {family}")
+                            logger.info(
+                                f"Found single valid taxid ({taxid}) for family {family}"
+                            )
                             return taxid
                         else:
                             # Multiple valid taxids - take the one with most matching higher taxonomy
-                            best_taxid = max(valid_taxids, key=lambda x: x[1]['match_score'])[0]
-                            logger.warning(f"Multiple valid taxids for family {family}, using best match: {best_taxid}")
+                            best_taxid = max(
+                                valid_taxids, key=lambda x: x[1]["match_score"]
+                            )[0]
+                            logger.warning(
+                                f"Multiple valid taxids for family {family}, using best match: {best_taxid}"
+                            )
                             return best_taxid
                     else:
                         # Single match - still validate
                         taxid = taxids[0]
-                        is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                        is_valid, lineage = self.validate_taxonomy_consistency(
+                            taxid, provided_taxonomy
+                        )
                         if is_valid:
-                            logger.info(f"Confirmed taxid {taxid} for {family} is valid given input taxonomy")
+                            logger.info(
+                                f"Confirmed taxid {taxid} for {family} is valid given input taxonomy"
+                            )
                             return taxid
                         else:
-                            logger.warning(f"Taxonomic mismatch for taxid {taxid}, it does not match the input higher taxonomy")
+                            logger.warning(
+                                f"Taxonomic mismatch for taxid {taxid}, it does not match the input higher taxonomy"
+                            )
                             # Continue to next level
             except Exception as e:
                 logger.error(f"Error searching for family taxid: {e}")
@@ -1052,39 +1115,57 @@ class EntrezHandler:
                 result = self.search(db="taxonomy", term=search_term)
                 if result and result.get("IdList") and len(result["IdList"]) > 0:
                     taxids = result["IdList"]
-                    
+
                     # Check for multiple matches
                     if len(taxids) > 1:
-                        logger.warning(f"Multiple taxids found for order {order}: {taxids}")
-                        
+                        logger.warning(
+                            f"Multiple taxids found for order {order}: {taxids}"
+                        )
+
                         # Validate each taxid against the provided taxonomy
                         valid_taxids = []
                         for taxid in taxids:
-                            is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                            is_valid, lineage = self.validate_taxonomy_consistency(
+                                taxid, provided_taxonomy
+                            )
                             if is_valid:
                                 valid_taxids.append((taxid, lineage))
-                        
+
                         if not valid_taxids:
-                            logger.warning(f"None of the taxids for order {order} match the provided higher taxonomy")
+                            logger.warning(
+                                f"None of the taxids for order {order} match the provided higher taxonomy"
+                            )
                             # Continue to next level
                         elif len(valid_taxids) == 1:
                             taxid = valid_taxids[0][0]
-                            logger.info(f"Found single valid taxid ({taxid}) for order {order}")
+                            logger.info(
+                                f"Found single valid taxid ({taxid}) for order {order}"
+                            )
                             return taxid
                         else:
                             # Multiple valid taxids - take the one with most matching higher taxonomy
-                            best_taxid = max(valid_taxids, key=lambda x: x[1]['match_score'])[0]
-                            logger.warning(f"Multiple valid taxids for order {order}, using best match: {best_taxid}")
+                            best_taxid = max(
+                                valid_taxids, key=lambda x: x[1]["match_score"]
+                            )[0]
+                            logger.warning(
+                                f"Multiple valid taxids for order {order}, using best match: {best_taxid}"
+                            )
                             return best_taxid
                     else:
                         # Single match - still validate
                         taxid = taxids[0]
-                        is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                        is_valid, lineage = self.validate_taxonomy_consistency(
+                            taxid, provided_taxonomy
+                        )
                         if is_valid:
-                            logger.info(f"Confirmed taxid {taxid} for {order} is valid given input taxonomy")
+                            logger.info(
+                                f"Confirmed taxid {taxid} for {order} is valid given input taxonomy"
+                            )
                             return taxid
                         else:
-                            logger.warning(f"Taxonomic mismatch for taxid {taxid}, it does not match the input higher taxonomy")
+                            logger.warning(
+                                f"Taxonomic mismatch for taxid {taxid}, it does not match the input higher taxonomy"
+                            )
                             # Continue to next level
             except Exception as e:
                 logger.error(f"Error searching for order taxid: {e}")
@@ -1097,39 +1178,57 @@ class EntrezHandler:
                 result = self.search(db="taxonomy", term=search_term)
                 if result and result.get("IdList") and len(result["IdList"]) > 0:
                     taxids = result["IdList"]
-                    
+
                     # Check for multiple matches
                     if len(taxids) > 1:
-                        logger.warning(f"Multiple taxids found for class {class_name}: {taxids}")
-                        
+                        logger.warning(
+                            f"Multiple taxids found for class {class_name}: {taxids}"
+                        )
+
                         # At class level, we validate against phylum only
                         valid_taxids = []
                         for taxid in taxids:
-                            is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                            is_valid, lineage = self.validate_taxonomy_consistency(
+                                taxid, provided_taxonomy
+                            )
                             if is_valid:
                                 valid_taxids.append((taxid, lineage))
-                        
+
                         if not valid_taxids:
-                            logger.warning(f"None of the taxids for class {class_name} match the provided higher taxonomy")
+                            logger.warning(
+                                f"None of the taxids for class {class_name} match the provided higher taxonomy"
+                            )
                             # Continue to next level
                         elif len(valid_taxids) == 1:
                             taxid = valid_taxids[0][0]
-                            logger.info(f"Found single valid taxid ({taxid}) for class {class_name}")
+                            logger.info(
+                                f"Found single valid taxid ({taxid}) for class {class_name}"
+                            )
                             return taxid
                         else:
                             # Multiple valid taxids - take the one with most matching higher taxonomy
-                            best_taxid = max(valid_taxids, key=lambda x: x[1]['match_score'])[0]
-                            logger.warning(f"Multiple valid taxids for class {class_name}, using best match: {best_taxid}")
+                            best_taxid = max(
+                                valid_taxids, key=lambda x: x[1]["match_score"]
+                            )[0]
+                            logger.warning(
+                                f"Multiple valid taxids for class {class_name}, using best match: {best_taxid}"
+                            )
                             return best_taxid
                     else:
                         # Single match - still validate against phylum
                         taxid = taxids[0]
-                        is_valid, lineage = self.validate_taxonomy_consistency(taxid, provided_taxonomy)
+                        is_valid, lineage = self.validate_taxonomy_consistency(
+                            taxid, provided_taxonomy
+                        )
                         if is_valid:
-                            logger.info(f"Confirmed taxid {taxid} for {class_name} is valid given input taxonomy")
+                            logger.info(
+                                f"Confirmed taxid {taxid} for {class_name} is valid given input taxonomy"
+                            )
                             return taxid
                         else:
-                            logger.warning(f"Taxonomic mismatch for taxid {taxid}, it does not match the input higher taxonomy")
+                            logger.warning(
+                                f"Taxonomic mismatch for taxid {taxid}, it does not match the input higher taxonomy"
+                            )
                             # Continue to next level
             except Exception as e:
                 logger.error(f"Error searching for class taxid: {e}")
@@ -1142,16 +1241,20 @@ class EntrezHandler:
                 result = self.search(db="taxonomy", term=search_term)
                 if result and result.get("IdList") and len(result["IdList"]) > 0:
                     taxids = result["IdList"]
-                    
+
                     # At phylum level we have less to validate against. Still check for multiple matches
                     if len(taxids) > 1:
-                        logger.warning(f"Multiple taxids found for phylum {phylum}: {taxids}")
+                        logger.warning(
+                            f"Multiple taxids found for phylum {phylum}: {taxids}"
+                        )
                         # Take the first one since we're already at phylum level
                         taxid = taxids[0]
                     else:
                         taxid = taxids[0]
-                    
-                    logger.info(f"Confirmed taxid {taxid} for {phylum} is valid given input taxonomy")
+
+                    logger.info(
+                        f"Confirmed taxid {taxid} for {phylum} is valid given input taxonomy"
+                    )
                     return taxid
             except Exception as e:
                 logger.error(f"Error searching for phylum taxid: {e}")
@@ -1164,129 +1267,170 @@ class EntrezHandler:
     # Calcualte taxonomy match scores
     def validate_taxonomy_consistency(self, taxid, provided_taxonomy):
         logger.info(f"Validating taxonomy:")
-        logger.info(f"Comparing provided taxonomy against NCBI taxonomy for taxid {taxid}")
-        
+        logger.info(
+            f"Comparing provided taxonomy against NCBI taxonomy for taxid {taxid}"
+        )
+
         try:
             # Use the fetch_taxonomy method directly from EntrezHandler to get lineage information
-            complete_lineage, rank_info, current_rank, taxid_info = self.fetch_taxonomy(taxid)
-            
+            complete_lineage, rank_info, current_rank, taxid_info = self.fetch_taxonomy(
+                taxid
+            )
+
             if not complete_lineage:
-                logger.warning(f"No taxonomy data available for comparison (taxid: {taxid})")
-                return False, {'match_score': 0}
-            
+                logger.warning(
+                    f"No taxonomy data available for comparison (taxid: {taxid})"
+                )
+                return False, {"match_score": 0}
+
             # Build dictionary of the fetched taxonomy organized by rank
             fetched_taxonomy = {}
             for taxon in complete_lineage:
                 if taxon in rank_info:
                     rank = rank_info[taxon]
                     fetched_taxonomy[rank.lower()] = taxon
-            
+
             # Add the current taxon if it has a rank
             if current_rank != "no rank":
                 current_taxon = complete_lineage[-1] if complete_lineage else ""
                 fetched_taxonomy[current_rank.lower()] = current_taxon
 
-            logger.debug(f"Taxonomy comparison details - NCBI: {fetched_taxonomy}, Provided: {provided_taxonomy}")
-                
+            logger.debug(
+                f"Taxonomy comparison details - NCBI: {fetched_taxonomy}, Provided: {provided_taxonomy}"
+            )
+
             # Check consistency between provided and fetched taxonomy
             # Start with higher taxonomic ranks which are less likely to have homonyms
             match_score = 0
-            
+
             # Store details of what matched and what didn't
             match_details = {}
-            
+
             # Check phylum
             if provided_taxonomy["phylum"] and "phylum" in fetched_taxonomy:
-                phylum_match = provided_taxonomy["phylum"].lower() == fetched_taxonomy["phylum"].lower()
+                phylum_match = (
+                    provided_taxonomy["phylum"].lower()
+                    == fetched_taxonomy["phylum"].lower()
+                )
                 match_details["phylum"] = "match" if phylum_match else "mismatch"
                 if phylum_match:
                     match_score += 1  # Changed to 1 point per match
                 else:
-                    logger.warning(f"Phylum mismatch for taxid {taxid}: "
-                                 f"provided '{provided_taxonomy['phylum']}' vs "
-                                 f"fetched '{fetched_taxonomy['phylum']}'")
-            
+                    logger.warning(
+                        f"Phylum mismatch for taxid {taxid}: "
+                        f"provided '{provided_taxonomy['phylum']}' vs "
+                        f"fetched '{fetched_taxonomy['phylum']}'"
+                    )
+
             # Check class
             if provided_taxonomy["class"] and "class" in fetched_taxonomy:
-                class_match = provided_taxonomy["class"].lower() == fetched_taxonomy["class"].lower()
+                class_match = (
+                    provided_taxonomy["class"].lower()
+                    == fetched_taxonomy["class"].lower()
+                )
                 match_details["class"] = "match" if class_match else "mismatch"
                 if class_match:
                     match_score += 1  # Changed to 1 point per match
                 else:
-                    logger.warning(f"Class mismatch for taxid {taxid}: "
-                                 f"provided '{provided_taxonomy['class']}' vs "
-                                 f"fetched '{fetched_taxonomy['class']}'")
-            
+                    logger.warning(
+                        f"Class mismatch for taxid {taxid}: "
+                        f"provided '{provided_taxonomy['class']}' vs "
+                        f"fetched '{fetched_taxonomy['class']}'"
+                    )
+
             # Check order
             if provided_taxonomy["order"] and "order" in fetched_taxonomy:
-                order_match = provided_taxonomy["order"].lower() == fetched_taxonomy["order"].lower()
+                order_match = (
+                    provided_taxonomy["order"].lower()
+                    == fetched_taxonomy["order"].lower()
+                )
                 match_details["order"] = "match" if order_match else "mismatch"
                 if order_match:
                     match_score += 1  # Changed to 1 point per match
                 else:
-                    logger.warning(f"Order mismatch for taxid {taxid}: "
-                                 f"provided '{provided_taxonomy['order']}' vs "
-                                 f"fetched '{fetched_taxonomy['order']}'")
-            
+                    logger.warning(
+                        f"Order mismatch for taxid {taxid}: "
+                        f"provided '{provided_taxonomy['order']}' vs "
+                        f"fetched '{fetched_taxonomy['order']}'"
+                    )
+
             # Check family
             if provided_taxonomy["family"] and "family" in fetched_taxonomy:
-                family_match = provided_taxonomy["family"].lower() == fetched_taxonomy["family"].lower()
+                family_match = (
+                    provided_taxonomy["family"].lower()
+                    == fetched_taxonomy["family"].lower()
+                )
                 match_details["family"] = "match" if family_match else "mismatch"
                 if family_match:
                     match_score += 1  # Changed to 1 point per match
                 else:
-                    logger.warning(f"Family mismatch for taxid {taxid}: "
-                                 f"provided '{provided_taxonomy['family']}' vs "
-                                 f"fetched '{fetched_taxonomy['family']}'")
-            
+                    logger.warning(
+                        f"Family mismatch for taxid {taxid}: "
+                        f"provided '{provided_taxonomy['family']}' vs "
+                        f"fetched '{fetched_taxonomy['family']}'"
+                    )
+
             # Check genus
             if provided_taxonomy["genus"] and "genus" in fetched_taxonomy:
-                genus_match = provided_taxonomy["genus"].lower() == fetched_taxonomy["genus"].lower()
+                genus_match = (
+                    provided_taxonomy["genus"].lower()
+                    == fetched_taxonomy["genus"].lower()
+                )
                 match_details["genus"] = "match" if genus_match else "mismatch"
                 if genus_match:
                     match_score += 1  # Changed to 1 point per match
                 else:
-                    logger.warning(f"Genus mismatch for taxid {taxid}: "
-                                 f"provided '{provided_taxonomy['genus']}' vs "
-                                 f"fetched '{fetched_taxonomy['genus']}'")
-            
+                    logger.warning(
+                        f"Genus mismatch for taxid {taxid}: "
+                        f"provided '{provided_taxonomy['genus']}' vs "
+                        f"fetched '{fetched_taxonomy['genus']}'"
+                    )
+
             # Determine if this taxid is valid based on matches
             # We consider it valid if:
             # 1. No conflicts in higher taxonomy (phylum, class)
             # 2. Or if no higher taxonomy was provided to check against
-            
+
             # Check for higher taxonomy mismatches that would invalidate the match
             higher_taxonomy_conflict = False
-            
-            if (provided_taxonomy["phylum"] and 
-                "phylum" in fetched_taxonomy and 
-                match_details.get("phylum") == "mismatch"):
+
+            if (
+                provided_taxonomy["phylum"]
+                and "phylum" in fetched_taxonomy
+                and match_details.get("phylum") == "mismatch"
+            ):
                 higher_taxonomy_conflict = True
-            
-            if (provided_taxonomy["class"] and 
-                "class" in fetched_taxonomy and 
-                match_details.get("class") == "mismatch"):
+
+            if (
+                provided_taxonomy["class"]
+                and "class" in fetched_taxonomy
+                and match_details.get("class") == "mismatch"
+            ):
                 higher_taxonomy_conflict = True
-            
+
             is_valid = not higher_taxonomy_conflict
-            
+
             # Log validation result
             if is_valid:
-                logger.info(f"Taxonomy validation: taxid {taxid} passed validation with match score: {match_score}")
+                logger.info(
+                    f"Taxonomy validation: taxid {taxid} passed validation with match score: {match_score}"
+                )
             else:
-                logger.warning(f"Taxonomy validation: taxid {taxid} failed validation due to higher taxonomy conflicts")
-            
+                logger.warning(
+                    f"Taxonomy validation: taxid {taxid} failed validation due to higher taxonomy conflicts"
+                )
+
             return is_valid, {
-                'match_score': match_score,
-                'details': match_details,
-                'lineage': complete_lineage,
-                'fetched_taxonomy': fetched_taxonomy
+                "match_score": match_score,
+                "details": match_details,
+                "lineage": complete_lineage,
+                "fetched_taxonomy": fetched_taxonomy,
             }
-            
+
         except Exception as e:
             logger.error(f"Error validating taxonomy for taxid {taxid}: {e}")
             logger.error("Full error details:", exc_info=True)
-            return False, {'match_score': 0}
+            return False, {"match_score": 0}
 
 
 # =============================================================================
@@ -2301,8 +2445,12 @@ class SequenceProcessor:
                         if fetch_all and progress_counters:
                             # If max_sequences specified, use min(max_sequences, len(id_list))
                             # Otherwise use the actual number of sequences found
-                            total_sequences = min(max_sequences, len(id_list)) if max_sequences else len(id_list)
-                            progress_counters['total_sequences'] = total_sequences
+                            total_sequences = (
+                                min(max_sequences, len(id_list))
+                                if max_sequences
+                                else len(id_list)
+                            )
+                            progress_counters["total_sequences"] = total_sequences
 
                         # For non-fetch_all mode, apply prefiltering if there are many IDs
                         processed_ids = id_list
@@ -2861,9 +3009,13 @@ class SequenceProcessor:
 
         # Fetch taxonomy first (from cache if available)
         logger.debug(f"Starting sequence search for {gene_name} using taxid {taxid}")
-        taxonomy, taxon_ranks, initial_rank, taxon_ids = self.entrez.fetch_taxonomy(taxid)
+        taxonomy, taxon_ranks, initial_rank, taxon_ids = self.entrez.fetch_taxonomy(
+            taxid
+        )
         if not taxonomy:
-            logger.error(f"Could not fetch taxonomy for taxID ({taxid}), cannot search for sequences")
+            logger.error(
+                f"Could not fetch taxonomy for taxID ({taxid}), cannot search for sequences"
+            )
             return [], [], [], "No taxonomy found"
 
         # Get ordered list of ranks to traverse
@@ -3233,30 +3385,29 @@ class OutputManager:
 
         logger.info(f"Wrote {file_type} sequence summary to {file_path}")
 
+
 # Fetch and save GenBank file for a specific record ID
-def save_genbank_file(entrez: EntrezHandler, record_id: str, db: str, output_path: Path):
+def save_genbank_file(
+    entrez: EntrezHandler, record_id: str, db: str, output_path: Path
+):
     try:
         logger.info(f"Fetching GenBank file for {db} record {record_id}")
-        handle = entrez.fetch(
-            db=db, 
-            id=record_id, 
-            rettype="gb", 
-            retmode="text"
-        )
-  
+        handle = entrez.fetch(db=db, id=record_id, rettype="gb", retmode="text")
+
         if handle:
-            with open(output_path, 'w') as f:
+            with open(output_path, "w") as f:
                 f.write(handle.read())
             logger.info(f"Successfully saved GenBank file to {output_path}")
             return True
         else:
-             logger.warning(f"Failed to fetch GenBank file for {db} record {record_id}")
-             return False
-     
+            logger.warning(f"Failed to fetch GenBank file for {db} record {record_id}")
+            return False
+
     except Exception as e:
         logger.error(f"Error saving GenBank file for {record_id}: {e}")
         logger.error("Full error details:", exc_info=True)
         return False
+
 
 # =============================================================================
 # Processing functions
@@ -3275,7 +3426,7 @@ def process_sample(
         # Define output paths
         protein_path = output_manager.output_dir / f"{process_id}.fasta"
         nucleotide_path = output_manager.nucleotide_dir / f"{process_id}_dna.fasta"
-        
+
         # Define GenBank paths if needed
         protein_gb_path = output_manager.genbank_dir / f"{process_id}.gb"
         nucleotide_gb_path = output_manager.genbank_dir / f"{process_id}_dna.gb"
@@ -3317,23 +3468,20 @@ def process_sample(
 
                 # Store original ID for GenBank download
                 original_id = protein_record.id
-                
+
                 # Write FASTA
                 protein_record.id = process_id
                 protein_record.description = ""
                 SeqIO.write(protein_record, protein_path, "fasta")
                 logger.info(f"Written protein sequence to '{protein_path}'")
                 sequences_found = True
-                
+
                 # Download GenBank file if requested
                 if save_genbank:
                     save_genbank_file(
-                        processor.entrez,
-                        original_id,
-                        "protein",
-                        protein_gb_path
+                        processor.entrez, original_id, "protein", protein_gb_path
                     )
-                
+
             except Exception as e:
                 logger.error(f"Error writing protein sequence: {e}")
                 if protein_path.exists():
@@ -3349,26 +3497,23 @@ def process_sample(
                 logger.info(
                     f"SELECTED SEQUENCE: {nucleotide_record.id}: Length {len(nucleotide_record.seq)}bp"
                 )
-                
+
                 # Store original ID for GenBank download
                 original_id = nucleotide_record.id
-                
+
                 # Write FASTA
                 nucleotide_record.id = process_id
                 nucleotide_record.description = ""
                 SeqIO.write(nucleotide_record, nucleotide_path, "fasta")
                 logger.info(f"Written nucleotide sequence to '{nucleotide_path}'")
                 sequences_found = True
-                
+
                 # Download GenBank file if requested
                 if save_genbank:
                     save_genbank_file(
-                        processor.entrez,
-                        original_id,
-                        "nucleotide",
-                        nucleotide_gb_path
+                        processor.entrez, original_id, "nucleotide", nucleotide_gb_path
                     )
-                
+
             except Exception as e:
                 logger.error(f"Error writing nucleotide sequence: {e}")
                 if nucleotide_path.exists():
@@ -3383,6 +3528,7 @@ def process_sample(
     except Exception as e:
         logger.error(f"Error processing sample {process_id}: {e}")
         output_manager.log_failure(process_id, taxid, f"Processing error: {str(e)}")
+
 
 # Process inputs for'single' taxid mode, fetching all or N available sequences
 def process_single_taxid(
@@ -3440,7 +3586,7 @@ def process_single_taxid(
             for i, record in enumerate(protein_records):
                 # Store original ID for GenBank download
                 original_id = record.id
-                
+
                 # Save FASTA
                 filename = f"{record.id}.fasta"
                 output_path = output_dir / filename
@@ -3448,16 +3594,11 @@ def process_single_taxid(
                 logger.info(
                     f"Written protein sequence {i+1}/{len(protein_records)} to '{output_path}'"
                 )
-                
+
                 # Save GenBank if requested
                 if save_genbank:
                     gb_path = output_manager.genbank_dir / f"{record.id}.gb"
-                    save_genbank_file(
-                        processor.entrez,
-                        original_id,
-                        "protein",
-                        gb_path
-                    )
+                    save_genbank_file(processor.entrez, original_id, "protein", gb_path)
 
             # Use output manager to save summary
             output_manager.save_sequence_summary(protein_records, "protein")
@@ -3478,7 +3619,7 @@ def process_single_taxid(
             for i, record in enumerate(nucleotide_records):
                 # Store original ID for GenBank download
                 original_id = record.id
-                
+
                 # Save FASTA
                 filename = f"{record.id}.fasta"
                 output_path = nucleotide_dir / filename
@@ -3486,15 +3627,12 @@ def process_single_taxid(
                 logger.info(
                     f"Written nucleotide sequence {i+1}/{len(nucleotide_records)} to '{output_path}'"
                 )
-                
+
                 # Save GenBank if requested
                 if save_genbank:
                     gb_path = output_manager.genbank_dir / f"{record.id}.gb"
                     save_genbank_file(
-                        processor.entrez,
-                        original_id,
-                        "nucleotide",
-                        gb_path
+                        processor.entrez, original_id, "nucleotide", gb_path
                     )
 
             # Use output manager to save summary
@@ -3513,8 +3651,11 @@ def process_single_taxid(
         logger.error(f"Error processing taxid {taxid}: {e}")
         logger.error("Full error details:", exc_info=True)
 
+
 # Process samples.csv
-def process_taxid_csv(csv_path, gene_name, sequence_type, processor, output_manager, save_genbank=False):
+def process_taxid_csv(
+    csv_path, gene_name, sequence_type, processor, output_manager, save_genbank=False
+):
     try:
         samples_csv = Path(csv_path)
         logger.info(f"Samples file: {samples_csv}")
@@ -3573,9 +3714,16 @@ def process_taxid_csv(csv_path, gene_name, sequence_type, processor, output_mana
         logger.error(f"Fatal error processing taxid CSV: {e}")
         sys.exit(1)
 
+
 # Process samples_taxonomy.csv
 def process_taxonomy_csv(
-    csv_path, gene_name, sequence_type, processor, output_manager, entrez, save_genbank=False
+    csv_path,
+    gene_name,
+    sequence_type,
+    processor,
+    output_manager,
+    entrez,
+    save_genbank=False,
 ):
     try:
         taxonomy_csv = Path(csv_path)
@@ -3701,9 +3849,7 @@ def process_taxonomy_csv(
                         )
                         continue
 
-                    logger.info(
-                        f"Starting sequence search:"
-                    )
+                    logger.info(f"Starting sequence search:")
                     logger.info(
                         f"Using taxid {taxid} for sequence search of {process_id} ({genus}, {species})"
                     )
@@ -3736,6 +3882,7 @@ def process_taxonomy_csv(
         logger.error(f"Fatal error processing taxonomy CSV: {e}")
         sys.exit(1)
 
+
 def main():
     print("Starting gene_fetch.py")
     parser = setup_argument_parser()
@@ -3752,7 +3899,9 @@ def main():
 
     # Log if GenBank download is enabled
     if save_genbank:
-        logger.info("GenBank download mode enabled - will save .gb files in genbank/ subdirectory")
+        logger.info(
+            "GenBank download mode enabled - will save .gb files in genbank/ subdirectory"
+        )
 
     # Initialize components with required email/api_key
     try:
@@ -3856,7 +4005,7 @@ def main():
         sys.exit(1)
 
     logger.info("***********************************************************")
-    logger.info("              ! ! ! Gene fetch complete ! ! !              ")
+    logger.info("              !!!!! Gene fetch complete !!!!!              ")
     logger.info("***********************************************************")
 
 
