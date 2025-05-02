@@ -198,7 +198,7 @@ GeneFetch will function with other targets than those listed below, but it has h
 |--------------------|----------|--------|------------|-----------|--------|------|----------|
 | 570 Arthropod samples | Batch | COI | taxonomy.csv | Both | 4G | 1 | X:X:X |
 | 570 Arthropod samples | Batch | COI | samples.csv | Both (+ genbank) | 4G | 1 | X:X:X |
-| 570 Arthropod samples | Batch | COI | samples.csv | Nucleotide | 4G | 1 | X:X:X |
+| 570 Arthropod samples | Batch | COI | samples.csv | Nucleotide | 4G | 1 | 1:07:53  |
 
 | 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide (>500bp) | 4G | 1 | 1:23:26 |
 
