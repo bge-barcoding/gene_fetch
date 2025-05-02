@@ -165,12 +165,12 @@ output_dir/
 
 
 ## Running GeneFetch on a cluster
-- See '1_gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular). 
+- See 'gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular). 
 - Edit 'mem' and/or 'cpus-per-task' to set memory and CPU/threads - allocating lots of CPUs is unecessary as Gene Fetch is not paralellised (yet). The tool should run well with 4-10G memory and 1-2 CPUs.
 - Change paths and variables as needed.
-- Run '1_gene_fetch.sh' with:
+- Run 'gene_fetch.sh' with:
 ```
-sbatch 1_gene_fetch.sh
+sbatch gene_fetch.sh
 ```
 
 ## Supported targets
