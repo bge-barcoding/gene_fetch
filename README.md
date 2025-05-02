@@ -166,7 +166,7 @@ output_dir/
 
 ## Running GeneFetch on a cluster
 - See '1_gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular). 
-- Edit 'mem' and/or 'cpus-per-task' to set memory and CPU/threads allocation.
+- Edit 'mem' and/or 'cpus-per-task' to set memory and CPU/threads - allocating lots of CPUs is unecessary as Gene Fetch is not paralellised (yet). The tool should run well with 4-10G memory and 1-2 CPUs.
 - Change paths and variables as needed.
 - Run '1_gene_fetch.sh' with:
 ```
@@ -194,17 +194,16 @@ GeneFetch will function with other targets than those listed below, but it has h
 
 
 ## Benchmarking
-| Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time |
+| Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time (hh:mm:ss) |
 |--------------------|----------|--------|------------|-----------|--------|------|----------|
 | 570 Arthropod samples | Batch | COI | taxonomy.csv | Both | 4G | 1 | X:X:X |
 | 570 Arthropod samples | Batch | COI | samples.csv | Both (+ genbank) | 4G | 1 | X:X:X |
 | 570 Arthropod samples | Batch | COI | samples.csv | Nucleotide | 4G | 1 | 1:07:53  |
-
 | 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide (>500bp) | 4G | 1 | 1:23:26 |
+| All available (30) _A. thaliana_ sequences | Single | rbcL | N/A | Protein (>300aa) | 4G | 1 | 00:00:25 |
+| 1000 Culicidae sequences | Single | COX1 | N/A | nucleotide (>500bp) | 4G | 1 | X:X:X |
 
-| All (159) _A. thaliana_ sequences >300aa | Single | rbcL | N/A | Protein | 5G | 1 | 00:02:39 |
-| 1000 Culicidae sequences >500bp | Single | COX1 | N/A | nucleotide | 20G | 16 | 00:30:36 |
-| 1000 _M. tubercolisis_ sequences | Single | 16S | N/A | nucleotide | 20G | 16 | 00:10:33 |
+| 1000 _M. tubercolisis_ sequences | Single | 16S | N/A | nucleotide | 4G | 1 | X:X:X |
 
 ## Future Development
 - Add optional alignment of retrieved sequences
