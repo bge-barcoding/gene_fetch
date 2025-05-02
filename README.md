@@ -202,8 +202,7 @@ GeneFetch will function with other targets than those listed below, but it has h
 | 570 Arthropod samples | Batch | ND1 | samples.csv | Nucleotide (>500bp) | 4G | 1 | 1:23:26 |
 | All available (30) _A. thaliana_ sequences | Single | rbcL | N/A | Protein (>300aa) | 4G | 1 | 00:00:25 |
 | 1000 Culicidae sequences | Single | COI | N/A | nucleotide (>500bp) | 4G | 1 | 0031:05 |
-
-| 1000 _M. tubercolisis_ sequences | Single | 16S | N/A | nucleotide | 4G | 1 | X:X:X |
+| 1000 _M. tubercolisis_ sequences | Single | 16S | N/A | nucleotide | 4G | 1 | 01:23:54 |
 
 ## Future Development
 - Add optional alignment of retrieved sequences
