@@ -3,8 +3,8 @@
 #SBATCH --partition=day
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
-#SBATCH --mem=10G
-#SBATCH --cpus-per-task=8
+#SBATCH --mem=4G
+#SBATCH --cpus-per-task=1
 
 
 
@@ -20,10 +20,9 @@ API_KEY= XYZ
 # Gene search variables
 GENE=cox1
 TYPE=both
-
-#MIN_PROT_SIZE=
-#MIN_NUC_Size=
-#MAX_SEQS=
+#MIN_PROT_SIZE=500    # Default
+#MIN_NUC_Size=1000    # Default
+#MAX_SEQS=1000
 
 # Input and output directory paths
 SAMPLES_CSV=path/to/input/samples.csv
@@ -33,7 +32,7 @@ OUTPUT_DIR=path/to/out/dir
 
 
 # Run gene_fetch.py
-python 1_gene_fetch.py \
+python gene_fetch.py \
 	$GENE \
 	$OUTPUT_DIR \
 	$SAMPLES_CSV \
