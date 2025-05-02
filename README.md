@@ -109,10 +109,10 @@ python gene_fetch.py -e your.email@domain.com -k your_api_key \
 **Example 'samples_taxonomy.csv' input file (-i2/--in2)**
 | ID | phylum | class | order | family | genus | species |
 | --- | --- | --- | --- | --- | --- | --- |
-| sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | n/a |
+| sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | |
 | sample-2 | Arthropoda | Insecta | Hemiptera | Cicadellidae | Psammotettix | Psammotettix sabulicola |
 | sample-3 | Arthropoda | Insecta | Trichoptera | Limnephilidae | Dicosmoecus | Dicosmoecus palatus |
-
+* Leave blank if taxonomic information not known/needed
 
 ## Output
 ### 'Batch' mode
