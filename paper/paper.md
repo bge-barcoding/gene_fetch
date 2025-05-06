@@ -25,9 +25,9 @@ bibliography: paper.bib
 
 # Summary
 
-`Gene Fetch` (https://github.com/bge-barcoding/gene_fetch) is an open-source Python tool that automates the retrieval of sequence data from the National Center for Biotechnology Information (NCBI) sequence databases, namely GenBank [@Benson:2013]. GenBank is one of three mirrored partner databases, along with the European Nucleotide Archive (ENA) [@O’Cathail:2025] and DNA DataBank of Japan (DDBJ) [@Fukuda:2020], that form the International Nucleotide Sequence Database Collaboration (INSDC) [@Karsch-Mizrachi:2024]. As of writing, GenBank comprises >3.6 billion nucleotide sequences from >500,000 formally described species, and exhibits biennial doubling [@Sayers:2023]. 
+`Gene Fetch` (https://github.com/bge-barcoding/gene_fetch) is an open-source Python tool that automates the retrieval of sequence data from the National Center for Biotechnology Information (NCBI) sequence databases, namely GenBank [@Benson:2012]. GenBank is one of three mirrored partner databases, along with the European Nucleotide Archive (ENA) [@O’Cathail:2024] and DNA DataBank of Japan (DDBJ) [@Fukuda:2020], that form the International Nucleotide Sequence Database Collaboration (INSDC) [@Karsch-Mizrachi:2024]. As of writing, GenBank comprises >3.6 billion nucleotide sequences from >500,000 formally described species, and exhibits biennial doubling [@Sayers:2023]. 
 
-`Gene Fetch` addresses a critical need in biological research by streamlining the often tedious and error-prone task of sequence acquisition at scale. It is capable of retrieving both protein and nucleotide sequences for any genetic marker from organisms across the tree of life, including protein-coding genes (such as cytochrome oxidase subunits, NADH dehydrogenase, RuBisCO and matK), ribosomal RNA genes (like 16S, 18S, and 28S) and the internal transcribed spacer (ITS) regions. The tool accepts NCBI taxonomic identifiers (taxids) or hierarchical taxonomic information as input and can systematically traverse taxonomic hierarchies when target sequences are unavailable at the initially specified taxonomic level. This functionality is particularly valuable for researchers working with non-model organisms or taxonomic groups with sparse genetic data, and serves to “fetch” the closest available sequence for each of the focal taxa. The integrated ‘batch’ mode processes multiple input taxa and retrieves the ‘best’ sequence per taxa, while the ‘single’ mode enables exhaustive searching and retrieval of sequence targets for a specified taxon, and collectively, these two modes facilitate more efficient retrieval of sequence data for genomic and phylogenetic studies across diverse taxa.
+By streamlining the often tedious and error-prone task of sequence acquisition at scale, `Gene Fetch` addresses a critical need in biological research. It is capable of retrieving both protein and nucleotide sequences for any genetic marker from organisms across the tree of life, including protein-coding genes (such as cytochrome oxidase subunits, NADH dehydrogenase, RuBisCO and matK), ribosomal RNA genes (like 16S, 18S, and 28S) and the internal transcribed spacer (ITS) regions. The tool accepts NCBI taxonomic identifiers (taxids) or hierarchical taxonomic information as input and can systematically traverse taxonomic hierarchies when target sequences are unavailable at the initially specified taxonomic level. This functionality is particularly valuable for researchers working with non-model organisms or taxonomic groups with sparse genetic data, and serves to “fetch” the closest available sequence for each of the focal taxa. The integrated ‘batch’ mode processes multiple input taxa and retrieves the ‘best’ sequence per taxa, while the ‘single’ mode enables exhaustive searching and retrieval of sequence targets for a specified taxon, and collectively, these two modes facilitate more efficient retrieval of sequence data for genomic and phylogenetic studies across diverse taxa.
 
 
 
@@ -47,18 +47,16 @@ In contrast, `Gene Fetch` offers an accessible, high-throughput solution that au
 
 When run in 'batch' mode, `Gene Fetch` employs taxonomy traversal - If no sequences are found at the user-specified taxonomic level, the tool automatically escalates the search through progressively higher taxonomic ranks (e.g., species → genus → family, etc), ensuring retrieval of the taxonomically closest available reference sequence. The tool also cross-validates retrieved NCBI taxonomy against input taxonomy, effectively preventing common issues such as taxonomic homonyms (identical names referring to different organisms across distinct branches of the tree of life) and eliminating unreliable database entries (including unverified records, sequences with missing data, or entries with substandard annotations).
 
-`Gene Fetch` integrates robust progress logging, error handling, checkpointing, and provides a structured output (including GenBank files), making it particularly suited for researchers seeking reproducible, efficient, and biologically-informed sequence retrieval at scale.
-
 `Gene Fetch` offers several key capabilities:
 - Traverses taxonomic hierarchies from lower taxonomic ranks (e.g. species) to higher ranks (e.g. phylum) when sequences are unavailable at the requested level, documenting the matched taxonomic rank.
 - Optimised for 15 common genetic markers at point of release, with curated synonyms for improved search specificity, including popular “barcoding” genes. Additional markers and synonyms can be specified by the user.
 - Flexible inputs, accepting either taxids or taxonomic hierarchies. 
 - Supports both "batch" mode (retrieving one "best" sequence per input taxon) and "single" mode (retrieving all available sequences for a single specified taxon).
 - Extracts coding sequences (CDS) and rRNA features from larger records (e.g. mitogenomes and WGS records).
+- Implements length-based sequence filtering before retrieval to fit the user’s requirements.
 - Includes fallback mechanisms for handling inconsistently annotated entries (sequence feature extraction).
 - Produces detailed logs of applied parameters and search progress.
 - Checkpoint recovery to resume interrupted runs.
-- Implements length-based sequence filtering before retrieval to fit the user’s requirements.
 - Utilises batch processing and caching of retrieved taxonomic lineages to maximise efficiency.
 - Optional retrieval of GenBank records corresponding to the fetched sequence data.
 
@@ -72,13 +70,15 @@ The tool follows a modular, community standard design with four primary componen
 
 
 
-# Availability, acknowledgments and contributions
+# Availability
 
-`Gene Fetch` is available under an MIT license through the [GitHub repository](https://github.com/bge-barcoding/gene_fetch). The repository includes comprehensive documentation, usage examples, installation instructions, and benchmarking statistics. Further contributions following the project's guidelines are welcomed, and we encourage issues to be reported through GitHub issue tracker. We would like to thank Maria Kamouyiaros and Oliver White at the Natural History Museum in London for their valuable contributions to the conceptualisation, development and testing of `Gene Fetch`. 
+`Gene Fetch` is distributed as a Python package on [PyPi](https://pypi.org/project/gene-fetch/), with the source code, testing modules, and standalone script available under an MIT license through the GitHub repository. The repository also holds comprehensive documentation, usage examples, installation instructions, and benchmarking statistics. A supplementary shell wrapper script is also provided for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running SLURM. 
 
-`Gene Fetch` is distributed as a Python package on [PyPi](https://pypi.org/project/gene-fetch/), with the source code, testing modules, and standalone script available under an MIT license through the [GitHub repository](https://github.com/bge-barcoding/gene_fetch). The repository also holds comprehensive documentation, usage examples, installation instructions, and benchmarking statistics. A supplementary shell wrapper script is also provided for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running SLURM. Contributions following the project's guidelines are welcomed, and we encourage users to report issues through the GitHub issue tracker. 
 
-We extend our thanks to Maria Kamouyiaros and Oliver White at the Natural History Museum in London for their contributions to the conceptualisation and testing of `Gene Fetch`. This work is supported by Biodiversity Genomics Europe. Biodiversity Genomics Europe (Grant no.101059492) is funded by Horizon Europe under the Biodiversity, Circular Economy and Environment call (REA.B.3); co-funded by the Swiss State Secretariat for Education, Research and Innovation (SERI) under contract numbers 22.00173 and 24.00054; and by the UK Research and Innovation (UKRI) under the Department for Business, Energy and Industrial Strategy’s Horizon Europe Guarantee Scheme.
+
+# Acknowledgments and contributions
+
+Contributions following the project's guidelines are welcomed, and we encourage users to report issues through the GitHub issue tracker. We extend our thanks to Maria Kamouyiaros and Oliver White at the Natural History Museum in London for their contributions to the conceptualisation and testing of `Gene Fetch`. This work is supported by Biodiversity Genomics Europe. Biodiversity Genomics Europe (Grant no.101059492) is funded by Horizon Europe under the Biodiversity, Circular Economy and Environment call (REA.B.3); co-funded by the Swiss State Secretariat for Education, Research and Innovation (SERI) under contract numbers 22.00173 and 24.00054; and by the UK Research and Innovation (UKRI) under the Department for Business, Energy and Industrial Strategy’s Horizon Europe Guarantee Scheme.
 
 
 
