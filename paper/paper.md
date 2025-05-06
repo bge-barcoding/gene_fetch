@@ -72,7 +72,7 @@ The tool follows a modular, community standard design with four primary componen
 
 # Availability
 
-`Gene Fetch` is distributed as a Python package on [PyPi](https://pypi.org/project/gene-fetch/), with the source code, testing modules, and standalone script available under an MIT license through the GitHub repository. The repository also holds comprehensive documentation, usage examples, installation instructions, and benchmarking statistics. A supplementary shell wrapper script is also provided for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running SLURM. 
+`Gene Fetch` is distributed as a Python package on [PyPi](https://pypi.org/project/gene-fetch/), with the source code, testing modules, and standalone script available under an MIT license through the [GitHub](https://github.com/bge-barcoding/gene_fetch) repository. The repository also holds comprehensive documentation, usage examples, installation instructions, and benchmarking statistics. A supplementary shell wrapper script is also provided for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running SLURM. 
 
 
 
