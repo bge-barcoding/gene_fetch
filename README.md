@@ -36,14 +36,19 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 
 
 ## Installation
-Gene Fetch can be installed directly from PyPI:
+- Gene Fetch can be installed directly from [PyPI](https://pypi.org/project/gene-fetch/#description):
 ```bash
-pip install gene_fetch
-cd gene_fetch
+pip install gene-fetch
 ```
-
+- Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment. First Conda needs to be installed, which can be done from [here](https://www.anaconda.com/docs/getting-started/miniconda/install). Once installed:
+```bash
+conda create -n gene-fetch
+conda activate gene-fetch
+pip install gene-fetch
+```
+  
 ## Recommended: Testing
-- The Gene Fetch package includes comprehensive tests - Testing is divided into basic tests (which don't require external API access) and integration tests (which may require NCBI API credentials).
+- The Gene Fetch package includes comprehensive tests, consisting of 8 test modules (tests/test_*.py). 
 - Install pytest:
 ```bash
 pip install pytest
@@ -52,7 +57,7 @@ pip install pytest
 ```bash
 pytest -m "not integration"
 ```
-* This will take a few minutes to run 65 tests, consisting of 8 test modules (tests/test_*.py). You will get 1 warning regarding API credentials as these are not provided in the basic tests.
+* This will take a few minutes to run. You will get 1 warning regarding API credentials as these are not provided in the basic tests.
 
 ## Usage
 ```bash
