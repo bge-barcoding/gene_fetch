@@ -54,6 +54,16 @@ conda activate gene-fetch
 # Install Gene Fetch
 pip install gene-fetch
 ```
+
+- If you would rather clone this repository and run a standalone version of Gene Fetch (without needing to run `pip install gene-fetch`) for some reason, you can do that as follows:
+```bash
+# Clone the repository
+git clone https://github.com/bge-barcoding/gene_fetch.git
+cd gene_fetch
+
+# Run standalone Gene Fetch
+python /path/to/gene_fetch/standalone/gene_fetch.py [options]
+```
   
 ## Recommended: Testing
 - The Gene Fetch package includes some basic tests for each module that we recommend are run after installation.
