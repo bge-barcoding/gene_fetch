@@ -2,6 +2,8 @@
   <img src="gene_fetch_logo.svg" width="400" alt="gene_fetch_logo">
 </p>
 
+[![PyPI version](https://img.shields.io/pypi/v/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
+
 # GeneFetch 
 Gene Fetch enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
