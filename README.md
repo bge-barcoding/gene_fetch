@@ -3,7 +3,7 @@
 </p>
 
 # GeneFetch 
-This tool enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
+Gene Fetch enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 
 ## Highlight features
@@ -36,31 +36,28 @@ This tool enables high-throughput retreival of sequence data from NCBI databases
 
 
 ## Installation
-Gene Fetch is an indexed python package, and so the tool, its dependencies, and tests can be installed by simple running:
+Gene Fetch can be installed directly from PyPI:
 ```bash
-pip install GeneFetch
+pip install gene_fetch
 cd gene_fetch
 ```
 
 ## Recommended: Testing
 - The Gene Fetch package includes comprehensive tests - Testing is divided into basic tests (which don't require external API access) and integration tests (which may require NCBI API credentials).
-- To run the basic test suite (no API keys required). These tests use mocked responses and don't make actual calls to external services:
+- Install pytest:
 ```bash
-poetry run pytest
+pip install pytest
 ```
-- To run the full test suite (API keys required):
-  - Register for an API key at (NCBI's E-utilities)[https://support.nlm.nih.gov/kbArticle/?pn=KA-05317].
-  - Run all tests, including those requireing API credentials:
+- Run basic tests:
 ```bash
-NCBI_API_KEY=your_api_key NCBI_EMAIL=your_email@example.com poetry 
+python -m pytest --pyargs gene_fetch -m "not integration"
 ```
-
 
 ## Usage
 ```bash
-python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o/--out <output_directory> 
+gene-fetch -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o/--out <output_directory> 
 ```
-* `--h/--help`: Show help and exit.
+* `--help`: Show usage help and exit.
 
 ### Required arguments
 * `-g/--gene`: Name of gene to search for in NCBI GenBank database (e.g., cox1/16s/rbcl).
@@ -80,23 +77,23 @@ python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <sampl
 ## Examples
 Fetch both protein and nucleotide sequences for COI with default sequence length thresholds, and store the corresponding genbank records.
 ```
-python gene_fetch.py -e your.email@domain.com -k your_api_key \
-                    -g cox1 -o ./output_dir -i ./samples.csv \
-                    --type both --genbank
+gene-fetch -e your.email@domain.com -k your_api_key \
+            -g cox1 -o ./output_dir -i ./samples.csv \
+            --type both --genbank
 ```
 
 Fetch rbcL nucleotide sequences using sample taxonomic information, applying a minimum nucleotide sequence length of 1000bp
 ```
-python gene_fetch.py -e your.email@domain.com -k your_api_key \
-                    -g rbcl -o ./output_dir -i2 ./taxonomy.csv \
-                    --type nucleotide --nucleotide-size 1000
+gene-fetch -e your.email@domain.com -k your_api_key \
+            -g rbcl -o ./output_dir -i2 ./taxonomy.csv \
+            --type nucleotide --nucleotide-size 1000
 ```
 
 Retrieve 1000 available matK protein sequences >400aa for _Arabidopsis thaliana_ (taxid: 3702).
 ```
-python gene_fetch.py -e your.email@domain.com -k your_api_key \
-                    -g matk -o ./output_dir -s 3702 \
-                    --type protein --protein-size 400 --max-sequences 1000
+gene-fetch -e your.email@domain.com -k your_api_key \
+            -g matk -o ./output_dir -s 3702 \
+            --type protein --protein-size 400 --max-sequences 1000
 ```
 
 
