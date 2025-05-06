@@ -7,14 +7,14 @@ tags:
   - Biodiversity Genomics
   - Barcoding
 authors:
-  - name: Daniel A.J Parsons
+  - name: Daniel A.J. Parsons
     orcid: 0000-0002-5246-0725
     affiliation: 1 
   - name: Benjamin W. Price
     orcid: 0000-0001-5497-4087
     affiliation: 1
 affiliations:
- - name: Natural History Museum, Cromwell Road, South Kensington, London, England SW7 5BD, United Kingdom
+ - name: Natural History Museum, Cromwell Road, London, England SW7 5BD, United Kingdom
    index: 1
    ror: 000017519k585
 date: 07 May 2025
@@ -64,7 +64,7 @@ In contrast, `Gene Fetch` offers an accessible, high-throughput solution that au
 
 # Implementation
 
-`Gene Fetch` is implemented in Python (≥3.9) and leverages two main libraries: Biopython [@Cock:2009], which, through subpackages of the Bio package (Bio.Entrez, Bio.Seq, Bio.SeqIO, and Bio.SeqRecord), provides the foundation for NCBI database access, sequence parsing and manipulation; and RateLimit, which manages NCBI API rate constraints (beyond those provided in Bio.Entrez) to prevent request throttling. 
+`Gene Fetch` is implemented in Python `(>=3.9)` and leverages two main libraries: Biopython [@Cock:2009], which, through subpackages of the Bio package (Bio.Entrez, Bio.Seq, Bio.SeqIO, and Bio.SeqRecord), provides the foundation for NCBI database access, sequence parsing and manipulation; and RateLimit, which manages NCBI API rate constraints (beyond those provided in Bio.Entrez) to prevent request throttling. 
 
 The tool follows a modular, community standard design with four primary components: configuration manager (handles search parameters and target-specific search term generation), Entrez handler (manages API interactions with NCBI's Entrez system with comprehensive error handling), sequence processor (implements the core logic for extracting and validating target sequences), and output manager (controls file generation and reporting). `Gene Fetch` can process hundereds-thousands of samples (in 'batch' mode) with modest computational resources, as outlined in the benchmarking section of the GitHub repository.
 
