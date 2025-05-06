@@ -48,16 +48,19 @@ pip install gene-fetch
 ```
   
 ## Recommended: Testing
-- The Gene Fetch package includes comprehensive tests, consisting of 8 test modules (tests/test_*.py). 
-- Install pytest:
+- The Gene Fetch package includes some basic tests for each module that we recommend are run after installation.
 ```bash
+# Clone the repository
+git clone https://github.com/bge-barcoding/gene_fetch.git
+cd gene_fetch
+
+# Install pytest
 pip install pytest
+
+# Run tests
+pytest
 ```
-- Run basic tests:
-```bash
-pytest -m "not integration"
-```
-* This will take a few minutes to run. You will get 1 warning regarding API credentials as these are not provided in the basic tests.
+* This will take a few minutes to run the tests. You will get 1 warning regarding API credentials as these are not provided in the basic tests.
 
 ## Usage
 ```bash
