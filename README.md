@@ -2,8 +2,11 @@
   <img src="gene_fetch_logo.svg" width="400" alt="gene_fetch_logo">
 </p>
 
+[![PyPI version](https://img.shields.io/pypi/v/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
+
 # GeneFetch 
-This tool enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
+Gene Fetch enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 
 ## Highlight features
@@ -36,30 +39,43 @@ This tool enables high-throughput retreival of sequence data from NCBI databases
 
 
 ## Installation
-First, clone the GeneFetch GitHub repository to your current path, and enter the Gene Fetch installation directory 
+- Gene Fetch can be installed directly from [PyPI](https://pypi.org/project/gene-fetch/#description):
 ```bash
-git clone https://github.com/bge-barcoding/gene_fetch
+pip install gene-fetch
+```
+- Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment. First Conda needs to be installed, which can be done from [here](https://www.anaconda.com/docs/getting-started/miniconda/install). Once installed:
+```bash
+# Create new environment
+conda create -n gene-fetch
 
+# Activate environment
+conda activate gene-fetch
+
+# Install Gene Fetch
+pip install gene-fetch
+```
+  
+## Recommended: Testing
+- The Gene Fetch package includes some basic tests for each module that we recommend are run after installation.
+```bash
+# Clone the repository
+git clone https://github.com/bge-barcoding/gene_fetch.git
 cd gene_fetch
-```
-Run the commands below to install the necessary dependencies and activate the Conda environment. [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) must be installed.
-```bash
-conda env create -n fetch -f fetch.yaml
 
-conda activate fetch
+# Install pytest
+pip install pytest
+
+# Run tests
+pytest
 ```
-Alternatively, you can install the dependencies below directly or in your own Conda environment
-```
-conda install python>=3.9 pip
-pip install ratelimit>=2.2.1
-pip install biopython>=1.80
-```
+* This will take a few minutes to run the tests. You will get 1 warning regarding API credentials as these are not provided in the basic tests.
 
 ## Usage
 ```bash
-python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o/--out <output_directory> 
+gene-fetch -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o/--out <output_directory> 
 ```
-* `--h/--help`: Show help and exit.
+* `--help`: Show usage help and exit.
+
 ### Required arguments
 * `-g/--gene`: Name of gene to search for in NCBI GenBank database (e.g., cox1/16s/rbcl).
 * `--type`: Sequence type to fetch; 'protein', 'nucleotide', or 'both' ('both' will initially search and fetch a protein sequence, and then fetches the corresponding nucleotide CDS for that protein sequence).
@@ -78,23 +94,23 @@ python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <sampl
 ## Examples
 Fetch both protein and nucleotide sequences for COI with default sequence length thresholds, and store the corresponding genbank records.
 ```
-python gene_fetch.py -e your.email@domain.com -k your_api_key \
-                    -g cox1 -o ./output_dir -i ./samples.csv \
-                    --type both --genbank
+gene-fetch -e your.email@domain.com -k your_api_key \
+            -g cox1 -o ./output_dir -i ./samples.csv \
+            --type both --genbank
 ```
 
 Fetch rbcL nucleotide sequences using sample taxonomic information, applying a minimum nucleotide sequence length of 1000bp
 ```
-python gene_fetch.py -e your.email@domain.com -k your_api_key \
-                    -g rbcl -o ./output_dir -i2 ./taxonomy.csv \
-                    --type nucleotide --nucleotide-size 1000
+gene-fetch -e your.email@domain.com -k your_api_key \
+            -g rbcl -o ./output_dir -i2 ./taxonomy.csv \
+            --type nucleotide --nucleotide-size 1000
 ```
 
 Retrieve 1000 available matK protein sequences >400aa for _Arabidopsis thaliana_ (taxid: 3702).
 ```
-python gene_fetch.py -e your.email@domain.com -k your_api_key \
-                    -g matk -o ./output_dir -s 3702 \
-                    --type protein --protein-size 400 --max-sequences 1000
+gene-fetch -e your.email@domain.com -k your_api_key \
+            -g matk -o ./output_dir -s 3702 \
+            --type protein --protein-size 400 --max-sequences 1000
 ```
 
 

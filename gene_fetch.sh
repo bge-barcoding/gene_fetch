@@ -11,7 +11,7 @@
 #activate conda env
 source ~/miniconda3/etc/profile.d/conda.sh
 conda init bash
-conda activate fetch
+conda activate gene-fetch
 
 # NCBI API parameters
 EMAIL=user_email@domain.ac.uk
@@ -32,8 +32,8 @@ OUTPUT_DIR=path/to/out/dir
 
 
 # Run gene_fetch.py
-python gene_fetch.py \
-	$GENE \
-	$OUTPUT_DIR \
-	$SAMPLES_CSV \
-	--type $TYPE
+gene-fetch \
+    $GENE \
+    $OUTPUT_DIR \
+    $SAMPLES_CSV \
+    --type $TYPE
