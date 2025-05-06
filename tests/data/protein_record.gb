@@ -1,0 +1,130 @@
+LOCUS       ABI97702                 513 aa            linear   INV 13-APR-2021
+DEFINITION  cytochrome oxidase subunit I, partial (mitochondrion) [Acrocera sp.
+            SLW-2002a].
+ACCESSION   ABI97702
+VERSION     ABI97702.1
+DBSOURCE    accession DQ631996.1
+KEYWORDS    .
+SOURCE      mitochondrion Acrocera sp. SLW-2002a
+  ORGANISM  Acrocera sp. SLW-2002a
+            Eukaryota; Metazoa; Ecdysozoa; Arthropoda; Hexapoda; Insecta;
+            Pterygota; Neoptera; Endopterygota; Diptera; Brachycera;
+            Muscomorpha; Nemestrinoidea; Acroceridae; Acrocera.
+REFERENCE   1  (residues 1 to 513)
+  AUTHORS   Winterton,S.L., Wiegmann,B.M. and Schlinger,E.I.
+  TITLE     Phylogeny and Bayesian divergence time estimations of small-headed
+            flies (Diptera: Acroceridae) using multiple molecular markers
+  JOURNAL   Mol. Phylogenet. Evol. 43 (3), 808-832 (2007)
+   PUBMED   17196837
+REFERENCE   2  (residues 1 to 513)
+  AUTHORS   Winterton,S.L., Wiegmann,B.M. and Schlinger,E.I.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (09-MAY-2006) California State Arthropod Collection,
+            California Dept of Food & Agriculture, 3294 Meadowview Rd.,
+            Sacramaneto, CA 95832, USA
+COMMENT     Method: conceptual translation.
+FEATURES             Location/Qualifiers
+     source          1..513
+                     /organism="Acrocera sp. SLW-2002a"
+                     /organelle="mitochondrion"
+                     /specimen_voucher="10948"
+                     /db_xref="taxon:210246"
+     Protein         <1..>513
+                     /product="cytochrome oxidase subunit I"
+     Region          6..513
+                     /region_name="COX1"
+                     /note="cytochrome c oxidase subunit I; Provisional;
+                     MTH00153"
+                     /db_xref="CDD:177210"
+     Site            order(13,93,97,99,106,147,151,169,173,193,200,203,211,
+                     220..222,227..228,230,240,278,281,284..285,289)
+                     /site_type="other"
+                     /note="Subunit I/III interface [polypeptide binding]"
+                     /db_xref="CDD:238833"
+     Site            order(22,83,94,101,104,159..160,166,170)
+                     /site_type="active"
+                     /note="D-pathway [active]"
+                     /db_xref="CDD:238833"
+     Site            order(28,32,35,39,119..120,403,476,479)
+                     /site_type="other"
+                     /note="Subunit I/VIIc interface [polypeptide binding]"
+                     /db_xref="CDD:238833"
+     Site            order(42,45..46,411,414..415,448,466)
+                     /site_type="other"
+                     /note="Subunit I/IV interface [polypeptide binding]"
+                     /db_xref="CDD:238833"
+     Site            order(58,230,268,271..272,297..299,302,305,313,321,324,
+                     331..333,345,363..364,366,368..372,436..437,441..443,
+                     452..453)
+                     /site_type="other"
+                     /note="Subunit I/II interface [polypeptide binding]"
+                     /db_xref="CDD:238833"
+     Site            order(64,381,385,427,464)
+                     /site_type="other"
+                     /note="Low-spin heme (heme a) binding site [chemical
+                     binding]"
+                     /db_xref="CDD:238833"
+     Site            order(117,120)
+                     /site_type="other"
+                     /note="Subunit I/VIIa interface [polypeptide binding]"
+                     /db_xref="CDD:238833"
+     Site            order(138,216..219)
+                     /site_type="other"
+                     /note="Subunit I/VIa interface [polypeptide binding]"
+                     /db_xref="CDD:238833"
+     Site            order(193,200,240,278,281,284..285,289)
+                     /site_type="other"
+                     /note="Dimer interface"
+                     /db_xref="CDD:238833"
+     Site            order(230,235..236,367,371..372,441)
+                     /site_type="other"
+                     /note="Putative water exit pathway"
+                     /db_xref="CDD:238833"
+     Site            order(243,293..294,379)
+                     /site_type="other"
+                     /note="Binuclear center (heme a3/CuB) [ion binding]"
+                     /db_xref="CDD:238833"
+     Site            order(243,247,258,293..294,319,322)
+                     /site_type="active"
+                     /note="K-pathway [active]"
+                     /db_xref="CDD:238833"
+     Site            order(294,371..372,441..442)
+                     /site_type="other"
+                     /note="Putative proton exit pathway"
+                     /db_xref="CDD:238833"
+     Site            299
+                     /site_type="other"
+                     /note="Subunit I/VIb interface"
+                     /db_xref="CDD:238833"
+     Site            332
+                     /site_type="other"
+                     /note="Subunit I/VIc interface [polypeptide binding]"
+                     /db_xref="CDD:238833"
+     Site            order(380,441..442)
+                     /site_type="active"
+                     /note="Electron transfer pathway [active]"
+                     /db_xref="CDD:238833"
+     Site            order(412,469)
+                     /site_type="other"
+                     /note="Subunit I/VIIIb interface [polypeptide binding]"
+                     /db_xref="CDD:238833"
+     Site            order(448,452)
+                     /site_type="other"
+                     /note="Subunit I/VIIb interface [polypeptide binding]"
+                     /db_xref="CDD:238833"
+     CDS             1..513
+                     /gene="COI"
+                     /coded_by="DQ631996.1:<1..>1539"
+                     /transl_table=5
+ORIGIN      
+        1 saiyhsrqwl fstnhkdigt lyfifgiwsg lvgtslslli raelgqpgsl igddqiynvi
+       61 vtahafimif fmvmpivigg fgnwlvplml aapdmafprm nnmsfwllpp sltlllassm
+      121 vesgagtgwt vypplsagia hagasvdlai fslhlagvss ilgavnfitt vinmrlnhmt
+      181 ldrmplfvws vaitalllll slpvlagait mlltdrnlnt sffdpagggd pvlyqhlfwf
+      241 fghpevyili lpgfgmishi isqecgkket fgtlgmiyam laigllgfiv wahhmftvgm
+      301 dvdtrayfts atmiiaiptg ikvfswmttl qgiqlnyspq llwslgfvfl ftmggltgii
+      361 lanssldivl hdtyyvvahf hyvlsmgavf aimagfihwy plftgltmnn kslknqfmim
+      421 flgvnmtffp qhflglmgmp rrysdypdsy tlwniissig stisllsiiy flfimwksmi
+      481 qkntpifsmq lnssiewnqt mpptehsyne lpi
+//
+
