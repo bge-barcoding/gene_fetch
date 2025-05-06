@@ -36,30 +36,32 @@ This tool enables high-throughput retreival of sequence data from NCBI databases
 
 
 ## Installation
-First, clone the GeneFetch GitHub repository to your current path, and enter the Gene Fetch installation directory 
+Gene Fetch is an indexed python package, and so the tool, its dependencies, and tests can be installed by simple running:
 ```bash
-git clone https://github.com/bge-barcoding/gene_fetch
-
+pip install GeneFetch
 cd gene_fetch
 ```
-Run the commands below to install the necessary dependencies and activate the Conda environment. [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) must be installed.
-```bash
-conda env create -n fetch -f fetch.yaml
 
-conda activate fetch
+## Recommended: Testing
+- The Gene Fetch package includes comprehensive tests - Testing is divided into basic tests (which don't require external API access) and integration tests (which may require NCBI API credentials).
+- To run the basic test suite (no API keys required). These tests use mocked responses and don't make actual calls to external services:
+```bash
+poetry run pytest
 ```
-Alternatively, you can install the dependencies below directly or in your own Conda environment
+- To run the full test suite (API keys required):
+  - Register for an API key at (NCBI's E-utilities)[https://support.nlm.nih.gov/kbArticle/?pn=KA-05317].
+  - Run all tests, including those requireing API credentials:
+```bash
+NCBI_API_KEY=your_api_key NCBI_EMAIL=your_email@example.com poetry 
 ```
-conda install python>=3.9 pip
-pip install ratelimit>=2.2.1
-pip install biopython>=1.80
-```
+
 
 ## Usage
 ```bash
 python gene_fetch.py -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o/--out <output_directory> 
 ```
 * `--h/--help`: Show help and exit.
+
 ### Required arguments
 * `-g/--gene`: Name of gene to search for in NCBI GenBank database (e.g., cox1/16s/rbcl).
 * `--type`: Sequence type to fetch; 'protein', 'nucleotide', or 'both' ('both' will initially search and fetch a protein sequence, and then fetches the corresponding nucleotide CDS for that protein sequence).
