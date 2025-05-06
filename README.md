@@ -50,8 +50,9 @@ pip install pytest
 ```
 - Run basic tests:
 ```bash
-python -m pytest --pyargs gene_fetch -m "not integration"
+pytest -m "not integration"
 ```
+* This will take a few minutes to run 65 tests, consisting of 8 test modules (tests/test_*.py). You will get 1 warning regarding API credentials as these are not provided in the basic tests.
 
 ## Usage
 ```bash
