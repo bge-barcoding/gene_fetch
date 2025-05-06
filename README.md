@@ -42,8 +42,13 @@ pip install gene-fetch
 ```
 - Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment. First Conda needs to be installed, which can be done from [here](https://www.anaconda.com/docs/getting-started/miniconda/install). Once installed:
 ```bash
+# Create new environment
 conda create -n gene-fetch
+
+# Activate environment
 conda activate gene-fetch
+
+# Install Gene Fetch
 pip install gene-fetch
 ```
   
