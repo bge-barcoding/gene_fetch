@@ -103,7 +103,7 @@ def setup_argument_parser():
         "-o",
         "--out",
         required=True,
-        help="Path to directory to save output files",
+        help="Path to directory to save output files (will create new directories)",
     )
 
     # Create mutually exclusive group for input files
@@ -113,7 +113,7 @@ def setup_argument_parser():
         "--in",
         dest="input_csv",
         help="Path to input CSV file containing taxIDs (must have columns "
-        '"taxid" and "ID")',
+        '"taxID" and "ID")',
     )
     input_group.add_argument(
         "-i2",
@@ -128,28 +128,30 @@ def setup_argument_parser():
         "-s",
         "--single",
         type=str,
-        help="Single taxID to fetch all available sequences for",
+        help="Single taxID to search and fetch (e.g., 7227)",
     )
 
     parser.add_argument(
         "--type",
         required=True,
         choices=["protein", "nucleotide", "both"],
-        help="Specify sequence type to fetch",
+        help="Specify sequence type to fetch (protein / nucleotide coding sequence / both)",
     )
 
     parser.add_argument(
         "--protein-size",
         type=int,
         default=500,
-        help="Minimum protein sequence length (default: 500)",
+        help="Minimum protein sequence length "
+        '(default: 500. Can be bypassed by setting to zero/a negative number)',
     )
 
     parser.add_argument(
         "--nucleotide-size",
         type=int,
         default=1000,
-        help="Minimum nucleotide sequence length (default: 1000)",
+        help="Minimum nucleotide sequence length (default: 1000)"
+        '(default: 1000. Can be bypassed by setting to zero/a negative number)',
     )
 
     parser.add_argument(
@@ -172,16 +174,15 @@ def setup_argument_parser():
         "--max-sequences",
         type=int,
         default=None,
-        help="Maximum number of sequences to fetch in single mode (only works "
+        help="Maximum number of sequences to fetch (only works "
         "with -s/--single)",
     )
 
-    # Add new argument for GenBank file downloads
     parser.add_argument(
         "-b",
         "--genbank",
         action="store_true",
-        help="Download GenBank (.gb) files for fetched sequences",
+        help="Download GenBank (.gb) files corresponding to fetched sequences",
     )
 
     return parser
@@ -631,8 +632,14 @@ class Config:
 
     # Update sequence length thresholds
     def update_thresholds(self, protein_size: int, nucleotide_size: int):
+        """Update the sequence length thresholds."""
+        # Batch mode
         self.protein_length_threshold = protein_size
         self.nucleotide_length_threshold = nucleotide_size
+        
+        # Single mode
+        self.min_protein_size_single_mode = protein_size
+        self.min_nucleotide_size_single_mode = nucleotide_size
 
     # Set search term based on gene name and type
     def set_gene_search_term(self, gene_name: str):
@@ -2688,13 +2695,13 @@ class SequenceProcessor:
                 if gene_name.lower() in self.config._rRNA_genes:
                     search_exclusions = " NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]"
 
-                if fetch_all:
+                if fetch_all and self.config.nucleotide_length_threshold <= 0:
+                    # Only skip size filtering when threshold is 0 or negative
                     nucleotide_search = f"{self.config.gene_search_term}{search_exclusions} AND txid{current_taxid}[Organism:exp]"
                 else:
-                    nucleotide_search = (
-                        f"{self.config.gene_search_term}{search_exclusions} AND txid{current_taxid}[Organism:exp] "
-                        f"AND {self.config.nucleotide_length_threshold}:60000[SLEN]"
-                    )
+                    # Apply size filter for both single and batch modes
+                    nucleotide_search = f"{self.config.gene_search_term}{search_exclusions} " \
+                    f"AND txid{current_taxid}[Organism:exp] AND {self.config.nucleotide_length_threshold}:60000[SLEN]"
 
                 logger.info(
                     f"Searching nucleotide database at rank {rank_name} ({taxon_name}) with term: {nucleotide_search}"
@@ -4005,7 +4012,7 @@ def main():
         sys.exit(1)
 
     logger.info("***********************************************************")
-    logger.info("              !!!!! Gene fetch complete !!!!!              ")
+    logger.info("              ? ? ? Gene fetch complete ? ? ?              ")
     logger.info("***********************************************************")
 
 
