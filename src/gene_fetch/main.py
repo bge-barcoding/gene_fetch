@@ -39,7 +39,7 @@ def setup_argument_parser():
         "-o",
         "--out",
         required=True,
-        help="Path to directory to save output files",
+        help="Path to directory to save output files (will create new directories)",
     )
 
     # Create mutually exclusive group for input files
@@ -49,7 +49,7 @@ def setup_argument_parser():
         "--in",
         dest="input_csv",
         help="Path to input CSV file containing taxIDs (must have columns "
-        '"taxid" and "ID")',
+        '"taxID" and "ID")',
     )
     input_group.add_argument(
         "-i2",
@@ -64,28 +64,30 @@ def setup_argument_parser():
         "-s",
         "--single",
         type=str,
-        help="Single taxID to fetch all available sequences for",
+        help="Single taxID to search and fetch (e.g., 7227)",
     )
 
     parser.add_argument(
         "--type",
         required=True,
         choices=["protein", "nucleotide", "both"],
-        help="Specify sequence type to fetch",
+        help="Specify sequence type to fetch (protein / nucleotide coding sequence / both)",
     )
 
     parser.add_argument(
         "--protein-size",
         type=int,
         default=500,
-        help="Minimum protein sequence length (default: 500)",
+        help="Minimum protein sequence length "
+        '(default: 500. Can be bypassed by setting to zero/a negative number)',
     )
 
     parser.add_argument(
         "--nucleotide-size",
         type=int,
         default=1000,
-        help="Minimum nucleotide sequence length (default: 1000)",
+        help="Minimum nucleotide sequence length"
+        '(default: 1000. Can be bypassed by setting to zero/a negative number)',
     )
 
     parser.add_argument(
@@ -108,7 +110,7 @@ def setup_argument_parser():
         "--max-sequences",
         type=int,
         default=None,
-        help="Maximum number of sequences to fetch in single mode (only works "
+        help="Maximum number of sequences to fetch (only works "
         "with -s/--single)",
     )
 
@@ -116,7 +118,7 @@ def setup_argument_parser():
         "-b",
         "--genbank",
         action="store_true",
-        help="Download GenBank (.gb) files for fetched sequences",
+        help="Download GenBank (.gb) files corresponding to fetched sequences",
     )
 
     return parser
