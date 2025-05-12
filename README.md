@@ -3,7 +3,7 @@
 </p>
 
 [![PyPI version](https://img.shields.io/pypi/v/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
-[![Bioconda Version](https://img.shields.io/conda/v/bioconda/gene-fetch.svg?color=green)](https://anaconda.org/bioconda/gene-fetch)
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/gene-fetch/README.html)
 [![Python versions](https://img.shields.io/pypi/pyversions/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
 
 
