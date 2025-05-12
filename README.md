@@ -13,9 +13,9 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 - Fetch protein and/or nucleotide sequences from NCBI GenBank database.
 - Handles both direct nucleotide sequences and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
 - Support for both protein-coding and rDNA genes.
+- Customisable length filtering thresholds for protein and nucleotide sequences (default: protein=500aa. nucleotide=1000bp(.
 - Default "batch" mode processes multiple input taxa based on a user specified CSV file.
-- Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon, with default length thresholds reduced (protein: 50aa, nucleotide: 100bp).
-- Customisable length filtering thresholds for protein and nucleotide sequences.
+- Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds can be bypassed by setting the value to zero or a negative number).
 - Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. i.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
 - Taxonomic validation: validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxon name is used for different taxa across the tree of life).
 - Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second). Caches taxonomy lookups for reduced API calls.
