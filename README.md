@@ -97,7 +97,7 @@ gene-fetch -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o
 * `-g/--gene`: Name of gene to search for in NCBI GenBank database (e.g., cox1/16s/rbcl).
 * `--type`: Sequence type to fetch; 'protein', 'nucleotide', or 'both' ('both' will initially search and fetch a protein sequence, and then fetches the corresponding nucleotide CDS for that protein sequence).
 * `-i/--in`: Path to input CSV file containing sample IDs and TaxIDs (see [Input](#input) section below).
-* `i2/--in2`: Path to alternative input CSV file containing sample IDs and taxonomic information for each sample (see [Input](#input) section below).
+* `-i2/--in2`: Path to alternative input CSV file containing sample IDs and taxonomic information for each sample (see [Input](#input) section below).
 * `o/--out`: Path to output directory. The directory will be created if it does not exist.
 * `e/--email` and `-k/--api-key`: Email address and associated API key for NCBI account. An NCBI account is required to run this tool (due to otherwise strict API limitations) - information on how to create an NCBI account and find your API key can be found [here](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
 ### Optional arguments
