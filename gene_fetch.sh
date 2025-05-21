@@ -8,8 +8,7 @@
 
 
 
-#activate conda env
-source ~/miniconda3/etc/profile.d/conda.sh
+# Activate conda env
 conda init bash
 conda activate gene-fetch
 
@@ -36,4 +35,5 @@ gene-fetch \
     $GENE \
     $OUTPUT_DIR \
     $SAMPLES_CSV \
+    --gene $GENE \
     --type $TYPE
