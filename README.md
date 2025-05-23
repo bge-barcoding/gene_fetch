@@ -5,6 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/gene-fetch/README.html)
 [![Python versions](https://img.shields.io/pypi/pyversions/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
+[![status](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538/status.svg)](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538)
 
 
 # GeneFetch 
