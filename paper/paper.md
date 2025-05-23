@@ -25,7 +25,7 @@ bibliography: paper.bib
 
 # Summary
 
-`Gene Fetch` (https://github.com/bge-barcoding/gene_fetch) is an open-source Python tool that automates the retrieval of sequence data from the National Center for Biotechnology Information (NCBI) sequence databases, namely GenBank [@Benson:2012]. GenBank is one of three mirrored partner databases, along with the European Nucleotide Archive (ENA) [@OCathail2024] and DNA DataBank of Japan (DDBJ) [@Fukuda:2020], that form the International Nucleotide Sequence Database Collaboration (INSDC) [@Karsch-Mizrachi:2024]. As of writing, GenBank comprises >3.6 billion nucleotide sequences from >500,000 formally described species, and exhibits biennial doubling [@Sayers:2023]. 
+`Gene Fetch` is an open-source Python tool that automates the retrieval of sequence data from the National Center for Biotechnology Information (NCBI) sequence databases, namely GenBank [@Benson:2012]. GenBank is one of three mirrored partner databases, along with the European Nucleotide Archive (ENA) [@OCathail2024] and DNA DataBank of Japan (DDBJ) [@Fukuda:2020], that form the International Nucleotide Sequence Database Collaboration (INSDC) [@Karsch-Mizrachi:2024]. As of writing, GenBank comprises >3.6 billion nucleotide sequences from >500,000 formally described species, and exhibits biennial doubling [@Sayers:2023]. 
 
 By streamlining the often tedious and error-prone task of sequence acquisition at scale, `Gene Fetch` addresses a critical need in biological research. It is capable of retrieving both protein and nucleotide sequences for a user-specified genetic marker from across the tree of life, including protein-coding genes (such as cytochrome oxidase subunits, NADH dehydrogenases, RuBisCO and matK), ribosomal RNA genes (like 16S, 18S, and 28S) and the internal transcribed spacer (ITS) regions. The tool accepts both NCBI taxonomic identifiers (taxids) and hierarchical taxonomic information as input. 
 
@@ -72,7 +72,7 @@ The tool follows a modular, community standard design with four primary componen
 
 # Availability
 
-`Gene Fetch` is distributed as a Python package on [PyPi](https://pypi.org/project/gene-fetch/), with the source code, testing modules, and standalone script available under an MIT license through the [GitHub](https://github.com/bge-barcoding/gene_fetch) repository. The repository also holds comprehensive documentation, usage examples, installation instructions, and benchmarking statistics. A supplementary shell wrapper script is also provided for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running SLURM. 
+`Gene Fetch` is distributed as a Python package on [PyPi](https://pypi.org/project/gene-fetch/) and a [bioconda package](https://bioconda.github.io/recipes/gene-fetch/README.html), with the source code, testing modules, and a standalone script available under an MIT license through the [GitHub](https://github.com/bge-barcoding/gene_fetch) repository. The GitHub and package repositories also hold comprehensive documentation, usage examples, installation instructions, and benchmarking statistics. A supplementary shell wrapper script is also provided in the GitHub repository for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running the SLURM job scheduler. 
 
 
 
