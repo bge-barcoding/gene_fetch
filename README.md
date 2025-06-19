@@ -244,11 +244,17 @@ GeneFetch will function with other targets than those listed below, but it has h
 - Add optional alignment of retrieved sequences
 - Further improve efficiency of record searching and selecting the longest sequence
 - Add support for additional genetic markers beyond the currently supported set
+- Add BOLD query falback if no 'quality' sequence is found in GenBank
 
 
-## Contributions and citations
+## Contributions and guidelines
+First off, thanks for taking the time to contribute! ❤️
+
+- If you hav any questions, we assume that you have read the available [Documentation](https://github.com/bge-barcoding/gene_fetch/blob/main/README.md). It may also be worth searching for existing [Issues](https://github.com/bge-barcoding/gene_fetch/issues) that might awnser your question(s). In case you have found a suitable issue and still need clarification, you can write your question in this issue.
+- If you feel you still need clarification or want to report a possible bug/unexpected behaviour, we recommend opening an [Issue](https://github.com/bge-barcoding/gene_fetch/issues/) and provide as much context as you can about what behaviour you were expecting and the behaviour you're running into.
+- If you want to suggest a novel feature or minor improvements to existing functionality, please make your case for the feature/enchanment by opening an [Issue](https://github.com/bge-barcoding/gene_fetch/issues/new) or create a pull request with your contribution (at which point it will be evaluated as a possible addition). We aim to address any issues as soon as possible.
+
+## Authorship & citation
 GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2025).
 
-If you use GeneFetch, please cite our publication: **XYZ()**
-
-If you have any questions or suggested improvements, please do get in touch in the issues!
+If you use GeneFetch, please cite our publication: **[XYZ]()**
