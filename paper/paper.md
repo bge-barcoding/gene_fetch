@@ -27,9 +27,9 @@ bibliography: paper.bib
 
 `Gene Fetch` is an open-source Python tool that automates the retrieval of sequence data from the National Center for Biotechnology Information (NCBI) sequence databases, namely GenBank [@Benson:2012]. GenBank is one of three mirrored partner databases which, along with the European Nucleotide Archive (ENA) [@OCathail2024] and DNA DataBank of Japan (DDBJ) [@Fukuda:2020], form the International Nucleotide Sequence Database Collaboration (INSDC) [@Karsch-Mizrachi:2024]. GenBank currently holds over 3.6 billion nucleotide sequences from over 500,000 formally described species, and exhibits biennial doubling [@Sayers:2023]. 
 
-By streamlining the often tedious and error-prone task of sequence acquisition at scale, `Gene Fetch` addresses a critical need in biological research. It is capable of retrieving both protein and nucleotide sequences for a user-specified genetic marker from across the tree of life, including protein-coding genes (such as cytochrome oxidase subunits, NADH dehydrogenases, RuBisCO and matK), ribosomal RNA genes (like 16S, 18S, and 28S) and the internal transcribed spacer (ITS) regions. The tool accepts both NCBI taxonomic identifiers (taxids) and hierarchical taxonomic information as input. 
+By streamlining the often tedious and error-prone task of sequence acquisition at scale, `Gene Fetch` addresses a critical need in biological research. It is capable of retrieving both protein and nucleotide sequences for a user-specified genetic marker from across the tree of life, including protein-coding genes (such as cytochrome oxidase subunits, NADH dehydrogenases, RuBisCO, and matK), ribosomal RNA genes (like 16S, 18S, and 28S) and the internal transcribed spacer (ITS) regions. The tool accepts both NCBI taxonomic identifiers (taxids) and hierarchical taxonomic information as input. 
 
-It can systematically traverse taxonomic hierarchies when target sequences are unavailable at the initially specified taxonomic rank (e.g., species → genus → family, etc), ensuring retrieval of the taxonomically closest available reference sequence. This is especially valuable for researchers working with non-model organisms or taxonomic groups with sparse genetic data, facilitating retrieval of the taxonomically closest available sequence. The integrated ‘batch’ mode processes multiple input taxa and retrieves the ‘best’ sequence per taxa, while the ‘single’ mode exhaustively searches for target sequences for a specified taxon. Collectively, these modes enable efficient retrieval of sequence data for genomic and phylogenetic studies across diverse taxa.
+It can systematically traverse taxonomic hierarchies when target sequences are unavailable at the initially specified taxonomic rank (e.g., species → genus → family, etc). This is especially valuable for researchers working with non-model organisms or taxonomic groups with sparse genetic data, facilitating retrieval of the taxonomically closest available sequence. The integrated ‘batch’ mode processes multiple input taxa and retrieves the ‘best’ sequence per taxa, while the ‘single’ mode exhaustively searches for target sequences for a specified taxon. Collectively, these modes enable efficient retrieval of sequence data for genomic and phylogenetic studies across diverse taxa.
 
 
 
@@ -48,13 +48,14 @@ In contrast, `Gene Fetch` offers an accessible, high-throughput solution that au
 `Gene Fetch` supports a "batch" and "single" query modes across both protein and nucleotide sequences, with automated CDS extraction, customisable length filtering, and fallback mechanisms for atypical GenBank annotations. It can also process variable GenBank features, including complementary strands, joined sequences, and whole genome shotgun entries, enabling extraction regions of interest from variable feature annotations (e.g., COI from mitogenome records). `Gene Fetch` cross-validates retrieved NCBI taxonomy against input taxonomy, preventing taxonomic homonyms matches (identical names referring to different organisms across the tree of life) and eliminating unreliable database entries (e.g., unverified records, missing data, or substandard annotations).
 
 `Gene Fetch` offers several features:
+
 - Traverses taxonomic hierarchies from lower taxonomic ranks (e.g. species) to higher ranks (e.g. phylum) when sequences are unavailable at the requested level, documenting the matched taxonomic rank.
-- Optimised for 15 common genetic markers, , including “barcoding” genes, with curated synonyms for improved search specificity. User's can also specify additional markers and synonyms.
+- Optimised for 15 common genetic markers, including “barcoding” genes, with curated synonyms for improved search specificity. Users can also specify additional markers and synonyms.
 - Flexible inputs, accepting taxids or taxonomic hierarchies. 
 - Supports "batch" mode and "single" mode.
 - Extracts coding sequences (CDS) and rRNA features from larger records (e.g. mitogenomes and WGS records).
 - Implements length-based sequence filtering before retrieval to fit the user’s requirements.
-- Includes fallback mechanisms for handling inconsistently annotated entries.
+- Includes fallback mechanisms to handle inconsistently annotated entries.
 - Produces detailed logs of parameters and search progress.
 - Checkpoint recovery to resume interrupted runs.
 - Utilises batch processing and taxonomic lineage caching to maximise efficiency.
@@ -66,7 +67,7 @@ In contrast, `Gene Fetch` offers an accessible, high-throughput solution that au
 
 `Gene Fetch` is implemented in Python `(>=3.9)` and leverages two main libraries: Biopython [@Cock:2009], which, through subpackages of the Bio package (Bio.Entrez, Bio.Seq, Bio.SeqIO, and Bio.SeqRecord), provides the foundation for NCBI database access, sequence parsing and manipulation; and RateLimit, which manages NCBI API rate constraints (beyond those provided in Bio.Entrez) to prevent request throttling. 
 
-The tool follows a modular design with four primary components: configuration manager (handles search parameters and target-specific search term generation), Entrez handler (manages NCBI API interactions with comprehensive error handling), sequence processor (implements core logic for sequence extraction and validation), and output manager (controls file generation and reporting). `Gene Fetch` can process hundereds-thousands of samples (in 'batch' mode) with modest computational resources, as outlined in the GitHub repository.
+The tool follows a modular design with four primary components: configuration manager (handles search parameters and target-specific search term generation), Entrez handler (manages NCBI API interactions with comprehensive error handling), sequence processor (implements core logic for sequence extraction and validation), and output manager (controls file generation and reporting). `Gene Fetch` can process hundreds to thousands of samples (in 'batch' mode) with modest computational resources, as outlined in the GitHub repository.
 
 
 
@@ -78,7 +79,7 @@ The tool follows a modular design with four primary components: configuration ma
 
 # Acknowledgments and contributions
 
-Contributions following the project's guidelines are welcomed. User's are encouraged to report bugs and suggest enhancements through the GitHub issue tracker. We thank Maria Kamouyiaros and Oliver White (Natural History Museum, London) for their contributions to the conceptualisation and testing of `Gene Fetch`. This work is supported by Biodiversity Genomics Europe (Grant no.101059492), funded by Horizon Europe under the Biodiversity, Circular Economy and Environment call (REA.B.3); co-funded by the Swiss State Secretariat for Education, Research and Innovation (SERI) under contract numbers 22.00173 and 24.00054; and by the UK Research and Innovation (UKRI) under the Department for Business, Energy and Industrial Strategy’s Horizon Europe Guarantee Scheme.
+Contributions following the project's guidelines are welcomed. Users are encouraged to report bugs and suggest enhancements through the GitHub issue tracker. We thank Maria Kamouyiaros and Oliver White (Natural History Museum, London) for their contributions to the conceptualisation and testing of `Gene Fetch`. This work is supported by Biodiversity Genomics Europe (Grant no.101059492), funded by Horizon Europe under the Biodiversity, Circular Economy and Environment call (REA.B.3); co-funded by the Swiss State Secretariat for Education, Research and Innovation (SERI) under contract numbers 22.00173 and 24.00054; and by the UK Research and Innovation (UKRI) under the Department for Business, Energy and Industrial Strategy’s Horizon Europe Guarantee Scheme.
 
 
 
