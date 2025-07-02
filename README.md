@@ -42,13 +42,6 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 
 
 ## Installation
-- Gene Fetch can be installed directly from [PyPI](https://pypi.org/project/gene-fetch/#description):
-```bash
-# Install via pip
-pip install gene-fetch
-
-# Verify installation
-gene-fetch --help
 ```
 - Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment. First Conda needs to be installed, which can be done from [here](https://www.anaconda.com/docs/getting-started/miniconda/install). Once installed:
 ```bash
@@ -57,9 +50,15 @@ conda create -n gene-fetch
 
 # Activate environment
 conda activate gene-fetch
+```
 
-# Install Gene Fetch
+- Gene Fetch can then be installed from [PyPI](https://pypi.org/project/gene-fetch/#description), or [Bioconda](https://anaconda.org/bioconda/gene-fetch):
+```bash
+# Install via pip
 pip install gene-fetch
+
+# OR, Install via bioconda
+conda install bioconda::gene-fetch
 
 # Verify installation
 gene-fetch --help
@@ -70,6 +69,11 @@ gene-fetch --help
 # Clone the repository
 git clone https://github.com/bge-barcoding/gene_fetch.git
 cd gene_fetch
+
+#Install dependencies
+- biopython=1.85
+- ratelimit=2.2.1
+- gene-fetch=1.0.11
 
 # Run standalone Gene Fetch
 python /path/to/gene_fetch/standalone/gene_fetch.py [options]
