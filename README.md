@@ -68,13 +68,13 @@ conda env update --name gene-fetch -f environment.yaml --prune
 gene-fetch --help
 ```
 
-- If you would rather clone this repository and run a standalone version of Gene Fetch (without needing to run `pip install gene-fetch`) for some reason, you can do that as follows:
+- If you would rather clone this repository and run a standalone version of Gene Fetch for some reason, you can do that as follows:
 ```bash
 # Clone the repository
 git clone https://github.com/bge-barcoding/gene_fetch.git
 cd gene_fetch
 
-# Activate conda environment (once created), and install gene-fetch (+ dependencies)
+# Activate conda environment (once created), and install gene-fetch (+ dependencies) via your preferred method.
 
 # Run standalone Gene Fetch
 python /path/to/gene_fetch.py [options]
