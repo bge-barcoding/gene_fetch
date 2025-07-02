@@ -16,7 +16,7 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 - Fetch protein and/or nucleotide sequences from NCBI GenBank database.
 - Handles both direct nucleotide sequences and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
 - Support for both protein-coding and rDNA genes.
-- Customisable length filtering thresholds for protein and nucleotide sequences (default: protein=500aa. nucleotide=1000bp(.
+- Customisable length filtering thresholds for protein and nucleotide sequences (default: protein=500aa. nucleotide=1000bp).
 - Default "batch" mode processes multiple input taxa based on a user specified CSV file.
 - Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds can be bypassed by setting the value to zero or a negative number).
 - Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. i.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
@@ -42,7 +42,6 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 
 
 ## Installation
-```
 - Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment. First Conda needs to be installed, which can be done from [here](https://www.anaconda.com/docs/getting-started/miniconda/install). Once installed:
 ```bash
 # Create new environment
@@ -70,13 +69,13 @@ gene-fetch --help
 git clone https://github.com/bge-barcoding/gene_fetch.git
 cd gene_fetch
 
-#Install dependencies
+#Install dependencies (likely in a conda env)
 - biopython=1.85
 - ratelimit=2.2.1
 - gene-fetch=1.0.11
 
 # Run standalone Gene Fetch
-python /path/to/gene_fetch/standalone/gene_fetch.py [options]
+python /path/to/gene_fetch.py [options]
 ```
   
 ## Recommended: Testing
