@@ -53,13 +53,16 @@ conda create -n gene-fetch
 conda activate gene-fetch
 ```
 
-- Gene Fetch can then be installed from [Bioconda](https://anaconda.org/bioconda/gene-fetch), or [PyPI](https://pypi.org/project/gene-fetch/#description):
+- Gene Fetch and all necessary dependencies can then be installed via [Bioconda](https://anaconda.org/bioconda/gene-fetch), [PyPI](https://pypi.org/project/gene-fetch/#description), or by specifying `environment.yaml`:
 ```bash
 # Install via bioconda
 conda install bioconda::gene-fetch
 
 # Or, install via pip
 pip install gene-fetch
+
+# Or, via environment specification
+conda env update --name gene-fetch -f environment.yaml --prune
 
 # Verify installation
 gene-fetch --help
@@ -71,10 +74,7 @@ gene-fetch --help
 git clone https://github.com/bge-barcoding/gene_fetch.git
 cd gene_fetch
 
-#Install dependencies (listed in environment.yaml)
-- biopython=1.85
-- ratelimit=2.2.1
-- gene-fetch=1.0.11
+# Activate conda environment (once created), and install gene-fetch (+ dependencies)
 
 # Run standalone Gene Fetch
 python /path/to/gene_fetch.py [options]
