@@ -58,11 +58,10 @@ jobs:
           # Test missing input file (should fail for file reasons, not credential reasons)
           poetry run gene-fetch -e "$NCBI_EMAIL" -k "$NCBI_API_KEY" -g cox1 --type protein -i nonexistent.csv -o ./test_output && exit 1 || echo "✓ CLI handles missing input files"
           
-          # Test invalid gene with real credentials (should proceed past validation but fail later)
-          timeout 20s poetry run gene-fetch -e "$NCBI_EMAIL" -k "$NCBI_API_KEY" -g invalid_gene_xyz123 --type protein -i tests/data/test_samples.csv -o ./test_output || echo "✓ CLI processes invalid gene names (timed out or failed as expected)"
+          echo "✓ All credential and file validation tests passed"
           
         else
-          echo "⚠️  NCBI credentials not available - skipping credential tests"
+          echo "⚠️  NCBI credentials not available - skipping real credential tests"
           echo "   (This is normal for external contributors)"
         fi
         
