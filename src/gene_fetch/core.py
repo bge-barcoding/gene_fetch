@@ -101,7 +101,6 @@ def get_process_id_column(header):
 # =============================================================================
 # Configuration
 # =============================================================================
-@dataclass
 class Config:
     """Configuration class for Gene Fetch, containing all runtime settings."""
     
