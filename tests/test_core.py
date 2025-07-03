@@ -214,3 +214,47 @@ def test_config_set_gene_search_term_generic():
     assert "unknown_gene[Gene]" in config.gene_search_term
     assert '"unknown_gene"[Text Word]' in config.gene_search_term
     assert search_type == "generic"
+
+
+def test_config_validate_credentials_valid_email_and_api_key():
+    """Test credential validation with valid email and API key."""
+    # These should not raise exceptions
+    Config.validate_credentials("test@example.com", "valid_test_key_12345")
+    Config.validate_credentials("user@domain.co.uk", "test_api_key_1234567890")
+    Config.validate_credentials("real.user@ncbi.gov", "1234567890abcdef")
+
+
+def test_config_validate_credentials_invalid_email():
+    """Test credential validation with invalid email formats."""
+    with pytest.raises(ValueError, match="Invalid email format"):
+        Config.validate_credentials("invalid-email", "valid_test_key_12345")
+    
+    with pytest.raises(ValueError, match="Invalid email format"):
+        Config.validate_credentials("missing@domain", "valid_test_key_12345")
+    
+    with pytest.raises(ValueError, match="Invalid email format"):
+        Config.validate_credentials("@domain.com", "valid_test_key_12345")
+
+
+def test_config_validate_credentials_invalid_api_key():
+    """Test credential validation with invalid API keys."""
+    # Test explicitly fake keys
+    with pytest.raises(ValueError, match="Invalid API key"):
+        Config.validate_credentials("test@example.com", "fake_key")
+    
+    with pytest.raises(ValueError, match="Invalid API key"):
+        Config.validate_credentials("test@example.com", "fake_api_key")
+    
+    # Test short keys (not in test list)
+    with pytest.raises(ValueError, match="Invalid API key"):
+        Config.validate_credentials("test@example.com", "short")
+    
+    with pytest.raises(ValueError, match="Invalid API key"):
+        Config.validate_credentials("test@example.com", "abc123")
+
+
+def test_config_validate_credentials_test_keys_allowed():
+    """Test that specific test API keys are allowed."""
+    # These test keys should be allowed regardless of length rules
+    Config.validate_credentials("test@example.com", "test_api_key_1234567890")
+    Config.validate_credentials("test@example.com", "valid_test_key_12345")
