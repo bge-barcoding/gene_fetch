@@ -421,20 +421,18 @@ def test_main_no_input_files(mock_parser, mock_make_out_dir, mock_setup_logging,
 @patch('gene_fetch.main.setup_logging')
 @patch('gene_fetch.main.make_out_dir')
 @patch('gene_fetch.main.setup_argument_parser')
-def test_main_config_error(mock_parser, mock_make_out_dir, mock_setup_logging, 
+def test_main_credential_validation_error(mock_parser, mock_make_out_dir, mock_setup_logging,
                           mock_config, mock_exit):
-    """Test main function when Config raises ValueError."""
-    # Set up Config to raise ValueError
-    mock_config.side_effect = ValueError("Test error")
+    """Test main function when credential validation fails."""
     
-    # Create a mock parser that returns a namespace with the required arguments
+    # Create a mock parser that returns a namespace with invalid credentials
     mock_parser_instance = MagicMock()
     mock_args = argparse.Namespace(
         gene='cox1',
         out='/tmp/out',
         type='both',
         email='test@example.com',
-        api_key='valid_test_key_12345',
+        api_key='fake_key',  # This should trigger validation failure
         input_csv=None,
         input_taxonomy_csv=None,
         single=None,
@@ -445,12 +443,15 @@ def test_main_config_error(mock_parser, mock_make_out_dir, mock_setup_logging,
     )
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
-    
+
     # Run main function
     main()
-    
-    # Check that sys.exit was called with 1 (error)
+
+    # Verify sys.exit was called
     mock_exit.assert_called_once_with(1)
+    
+    # Verify Config was never called (because validation failed first)
+    mock_config.assert_not_called()
 
 
 @patch('gene_fetch.main.sys.exit')
