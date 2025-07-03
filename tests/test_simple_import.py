@@ -13,7 +13,7 @@ def test_import():
     from gene_fetch.core import Config
     
     # Create Config with required arguments
-    config = Config(email="test@example.com", api_key="test_api_key_1234567890")
+    config = Config(email="test@example.com", api_key="valid_test_key_12345")
     
     # Create the EntrezHandler
     handler = EntrezHandler(config)
@@ -21,6 +21,6 @@ def test_import():
     # Verify objects are created correctly
     assert handler is not None
     assert config.email == "test@example.com"
-    assert config.api_key == "fake_api_key"
+    assert config.api_key == "valid_test_key_12345"
     
     print("Successfully imported and created EntrezHandler!")
