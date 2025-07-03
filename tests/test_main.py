@@ -9,8 +9,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock, call
 
-from gene_fetch.main import setup_argument_parser, main
-
+import gene_fetch.main as main_module
+from gene_fetch.main import main, setup_argument_parser
 
 def test_setup_argument_parser():
     """Test setting up the argument parser with all expected arguments."""
