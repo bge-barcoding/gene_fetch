@@ -131,7 +131,8 @@ def test_config_initialisation():
     """Test Config class initialisation with valid parameters."""
     # Test valid initialisation
     email = "test@example.com"
-    api_key = "abc123"
+    api_key = "valid_test_key_12345"
+    
     config = Config(email=email, api_key=api_key)
     
     # Check attributes
