@@ -7,7 +7,6 @@ Contains Config class and basic utility functions.
 import logging
 import sys
 import re
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Set, Dict, List, Any, FrozenSet
 
