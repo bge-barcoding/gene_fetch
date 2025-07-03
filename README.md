@@ -3,7 +3,10 @@
 </p>
 
 [![PyPI version](https://img.shields.io/pypi/v/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/gene-fetch/README.html)
+[![Python versions](https://img.shields.io/pypi/pyversions/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
+[![status](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538/status.svg)](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538)
+
 
 # GeneFetch 
 Gene Fetch enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
@@ -13,9 +16,9 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 - Fetch protein and/or nucleotide sequences from NCBI GenBank database.
 - Handles both direct nucleotide sequences and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
 - Support for both protein-coding and rDNA genes.
+- Customisable length filtering thresholds for protein and nucleotide sequences (default: protein=500aa. nucleotide=1000bp).
 - Default "batch" mode processes multiple input taxa based on a user specified CSV file.
-- Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon, with default length thresholds reduced (protein: 50aa, nucleotide: 100bp).
-- Customisable length filtering thresholds for protein and nucleotide sequences.
+- Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds can be bypassed by setting the value to zero or a negative number).
 - Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. i.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
 - Taxonomic validation: validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxon name is used for different taxa across the tree of life).
 - Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second). Caches taxonomy lookups for reduced API calls.
@@ -39,37 +42,42 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 
 
 ## Installation
-- Gene Fetch can be installed directly from [PyPI](https://pypi.org/project/gene-fetch/#description):
-```bash
-# Install via pip
-pip install gene-fetch
-
-# Verify installation
-gene-fetch --help
-```
-- Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment. First Conda needs to be installed, which can be done from [here](https://www.anaconda.com/docs/getting-started/miniconda/install). Once installed:
+- Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment.
+- First Conda needs to be installed, which can be done from [here](https://www.anaconda.com/docs/getting-started/miniconda/install).
+- Once installed:
 ```bash
 # Create new environment
 conda create -n gene-fetch
 
 # Activate environment
 conda activate gene-fetch
+```
 
-# Install Gene Fetch
+- Gene Fetch and all necessary dependencies can then be installed via [Bioconda](https://anaconda.org/bioconda/gene-fetch), [PyPI](https://pypi.org/project/gene-fetch/#description), or by specifying `environment.yaml`:
+```bash
+# Install via bioconda
+conda install bioconda::gene-fetch
+
+# Or, install via pip
 pip install gene-fetch
+
+# Or, via environment specification
+conda env update --name gene-fetch -f environment.yaml --prune
 
 # Verify installation
 gene-fetch --help
 ```
 
-- If you would rather clone this repository and run a standalone version of Gene Fetch (without needing to run `pip install gene-fetch`) for some reason, you can do that as follows:
+- If you would rather clone this repository and run a standalone version of Gene Fetch for some reason, you can do that as follows:
 ```bash
 # Clone the repository
 git clone https://github.com/bge-barcoding/gene_fetch.git
 cd gene_fetch
 
+# Activate conda environment (once created), and install gene-fetch (+ dependencies) via your preferred method.
+
 # Run standalone Gene Fetch
-python /path/to/gene_fetch/standalone/gene_fetch.py [options]
+python /path/to/gene_fetch.py [options]
 ```
   
 ## Recommended: Testing
@@ -97,12 +105,12 @@ gene-fetch -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o
 * `-g/--gene`: Name of gene to search for in NCBI GenBank database (e.g., cox1/16s/rbcl).
 * `--type`: Sequence type to fetch; 'protein', 'nucleotide', or 'both' ('both' will initially search and fetch a protein sequence, and then fetches the corresponding nucleotide CDS for that protein sequence).
 * `-i/--in`: Path to input CSV file containing sample IDs and TaxIDs (see [Input](#input) section below).
-* `i2/--in2`: Path to alternative input CSV file containing sample IDs and taxonomic information for each sample (see [Input](#input) section below).
+* `-i2/--in2`: Path to alternative input CSV file containing sample IDs and taxonomic information for each sample (see [Input](#input) section below).
 * `o/--out`: Path to output directory. The directory will be created if it does not exist.
 * `e/--email` and `-k/--api-key`: Email address and associated API key for NCBI account. An NCBI account is required to run this tool (due to otherwise strict API limitations) - information on how to create an NCBI account and find your API key can be found [here](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
 ### Optional arguments
 * `--protein-size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500).
-* `--nucleotide-size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1500).
+* `--nucleotide-size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1000).
 * `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` are ignored when run with `-s` mode). 'single' mode will fetch all (or N if specifying `--max-sequences`) target gene or protein sequences on GenBank for a specific taxonomic ID.
 * `--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
 * `-b/--genbank`: Saves genbank (.gb) files for fetched nucleotide and/or protein sequences to `genbank/` (applies when run in 'batch' or 'single' mode).
@@ -241,11 +249,17 @@ GeneFetch will function with other targets than those listed below, but it has h
 - Add optional alignment of retrieved sequences
 - Further improve efficiency of record searching and selecting the longest sequence
 - Add support for additional genetic markers beyond the currently supported set
+- Add BOLD query falback if no 'quality' sequence is found in GenBank
 
 
-## Contributions and citations
+## Contributions and guidelines
+First off, thanks for taking the time to contribute! ❤️
+
+- If you hav any questions, we assume that you have read the available [Documentation](https://github.com/bge-barcoding/gene_fetch/blob/main/README.md). It may also be worth searching for existing [Issues](https://github.com/bge-barcoding/gene_fetch/issues) that might awnser your question(s). In case you have found a suitable issue and still need clarification, you can write your question in this issue.
+- If you feel you still need clarification or want to report a possible bug/unexpected behaviour, we recommend opening an [Issue](https://github.com/bge-barcoding/gene_fetch/issues/) and provide as much context as you can about what behaviour you were expecting and the behaviour you're running into.
+- If you want to suggest a novel feature or minor improvements to existing functionality, please make your case for the feature/enchanment by opening an [Issue](https://github.com/bge-barcoding/gene_fetch/issues/new) or create a pull request with your contribution (at which point it will be evaluated as a possible addition). We aim to address any issues as soon as possible.
+
+## Authorship & citation
 GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2025).
 
-If you use GeneFetch, please cite our publication: **XYZ()**
-
-If you have any questions or suggested improvements, please do get in touch in the issues!
+If you use GeneFetch, please cite our publication: **[XYZ]()**

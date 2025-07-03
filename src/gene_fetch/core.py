@@ -379,8 +379,13 @@ class Config:
     # Update sequence length thresholds
     def update_thresholds(self, protein_size: int, nucleotide_size: int):
         """Update the sequence length thresholds."""
+        # Batch mode
         self.protein_length_threshold = protein_size
         self.nucleotide_length_threshold = nucleotide_size
+        
+        # Single mode
+        self.min_protein_size_single_mode = protein_size
+        self.min_nucleotide_size_single_mode = nucleotide_size
 
     # Set search term based on gene name and type
     def set_gene_search_term(self, gene_name: str) -> str:
