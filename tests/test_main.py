@@ -99,7 +99,7 @@ def test_main_single_taxid_mode(mock_parser, mock_make_out_dir, mock_setup_loggi
     # Verify correct functions were called
     mock_make_out_dir.assert_called_once()
     mock_setup_logging.assert_called_once()
-    mock_config.assert_called_once_with(email='test@example.com', api_key='abc123')
+    mock_config.assert_called_once_with(email='test@example.com', api_key='valid_test_key_12345')
     mock_config_instance.update_thresholds.assert_called_once()
     mock_config_instance.set_gene_search_term.assert_called_once_with('cox1')
     mock_entrez.assert_called_once_with(mock_config_instance)
@@ -141,7 +141,7 @@ def test_main_taxid_csv_mode(mock_parser, mock_make_out_dir, mock_setup_logging,
         out='/tmp/out',
         type='both',
         email='test@example.com',
-        api_key='abc123',
+        api_key='valid_test_key_12345',
         input_csv='samples.csv',
         input_taxonomy_csv=None,
         single=None,
@@ -174,7 +174,7 @@ def test_main_taxid_csv_mode(mock_parser, mock_make_out_dir, mock_setup_logging,
     # Verify correct functions were called
     mock_make_out_dir.assert_called_once()
     mock_setup_logging.assert_called_once()
-    mock_config.assert_called_once_with(email='test@example.com', api_key='abc123')
+    mock_config.assert_called_once_with(email='test@example.com', api_key='valid_test_key_12345')
     mock_config_instance.update_thresholds.assert_called_once()
     mock_config_instance.set_gene_search_term.assert_called_once_with('cox1')
     mock_entrez.assert_called_once_with(mock_config_instance)
@@ -213,7 +213,7 @@ def test_main_taxonomy_csv_mode(mock_parser, mock_make_out_dir, mock_setup_loggi
         out='/tmp/out',
         type='both',
         email='test@example.com',
-        api_key='abc123',
+        api_key='valid_test_key_12345',
         input_csv=None,
         input_taxonomy_csv='taxonomy.csv',
         single=None,
@@ -246,7 +246,7 @@ def test_main_taxonomy_csv_mode(mock_parser, mock_make_out_dir, mock_setup_loggi
     # Verify correct functions were called
     mock_make_out_dir.assert_called_once()
     mock_setup_logging.assert_called_once()
-    mock_config.assert_called_once_with(email='test@example.com', api_key='abc123')
+    mock_config.assert_called_once_with(email='test@example.com', api_key='valid_test_key_12345')
     mock_config_instance.update_thresholds.assert_called_once()
     mock_config_instance.set_gene_search_term.assert_called_once_with('cox1')
     mock_entrez.assert_called_once_with(mock_config_instance)
@@ -283,7 +283,7 @@ def test_main_with_advanced_options(mock_parser, mock_make_out_dir, mock_setup_l
         out='/tmp/out',
         type='both',
         email='test@example.com',
-        api_key='abc123',
+        api_key='valid_test_key_12345',
         input_csv='samples.csv',  # Add a CSV file to prevent the validation error
         input_taxonomy_csv=None,
         single='9606',
@@ -340,7 +340,7 @@ def test_main_invalid_sequence_type(mock_parser, mock_make_out_dir, mock_setup_l
         out='/tmp/out',
         type='invalid',  # This is an invalid sequence type
         email='test@example.com',
-        api_key='abc123',
+        api_key='valid_test_key_12345',
         input_csv='samples.csv',  # Add a CSV file to prevent the validation error
         input_taxonomy_csv=None,
         single=None,
@@ -385,7 +385,7 @@ def test_main_no_input_files(mock_parser, mock_make_out_dir, mock_setup_logging,
         out='/tmp/out',
         type='both',
         email='test@example.com',
-        api_key='abc123',
+        api_key='valid_test_key_12345',
         input_csv=None,
         input_taxonomy_csv=None,
         single=None,
@@ -434,7 +434,7 @@ def test_main_config_error(mock_parser, mock_make_out_dir, mock_setup_logging,
         out='/tmp/out',
         type='both',
         email='test@example.com',
-        api_key='abc123',
+        api_key='valid_test_key_12345',
         input_csv=None,
         input_taxonomy_csv=None,
         single=None,
@@ -464,7 +464,7 @@ def test_main_with_real_args(mock_parser, mock_exit):
         out='/tmp/out',
         type='both',
         email='test@example.com',
-        api_key='abc123',
+        api_key='valid_test_key_12345',
         input_csv=None,
         input_taxonomy_csv=None,
         single=None,
@@ -500,4 +500,4 @@ def test_main_with_real_args(mock_parser, mock_exit):
         mock_parser.assert_called_once()
         mock_make_out_dir.assert_called_once()
         mock_setup_logging.assert_called_once()
-        mock_config.assert_called_once_with(email='test@example.com', api_key='abc123')
+        mock_config.assert_called_once_with(email='test@example.com', api_key='valid_test_key_12345')
