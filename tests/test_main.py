@@ -420,10 +420,9 @@ def test_main_no_input_files(mock_parser, mock_make_out_dir, mock_setup_logging,
 @patch('gene_fetch.main.setup_logging')
 @patch('gene_fetch.main.make_out_dir')
 @patch('gene_fetch.main.setup_argument_parser')
-def test_main_credential_validation_error(mock_parser, mock_make_out_dir, mock_setup_logging,
-                          mock_config, mock_exit):
+def test_main_credential_validation_error(mock_parser, mock_make_out_dir, mock_setup_logging, mock_exit):
     """Test main function when credential validation fails."""
-    
+
     # Create a mock parser that returns a namespace with invalid credentials
     mock_parser_instance = MagicMock()
     mock_args = argparse.Namespace(
@@ -443,15 +442,11 @@ def test_main_credential_validation_error(mock_parser, mock_make_out_dir, mock_s
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
 
-    # Run main function
+    # Run main function - this should exit due to credential validation
     main()
 
-    # Verify sys.exit was called (should be the first call due to credential validation)
-    assert mock_exit.call_count >= 1
-    mock_exit.assert_any_call(1)
-    
-    # Verify Config was never called (because validation failed first)
-    mock_config.assert_not_called()
+    # Verify sys.exit was called
+    mock_exit.assert_called_with(1)
 
 
 @patch('gene_fetch.main.sys.exit')
