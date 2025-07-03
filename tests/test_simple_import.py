@@ -13,7 +13,7 @@ def test_import():
     from gene_fetch.core import Config
     
     # Create Config with required arguments
-    config = Config(email="test@example.com", api_key="fake_api_key")
+    config = Config(email="test@example.com", api_key="test_api_key_1234567890")
     
     # Create the EntrezHandler
     handler = EntrezHandler(config)
