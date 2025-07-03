@@ -13,7 +13,7 @@ from gene_fetch.core import Config, logger
 @pytest.fixture
 def entrez_handler():
     """Create an EntrezHandler instance for testing."""
-    config = Config(email="test@example.com", api_key="fake_api_key")
+    config = Config(email="test@example.com", api_key="test_api_key_1234567890")
     config.retmax = 10000
     return EntrezHandler(config)
 
