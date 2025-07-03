@@ -113,13 +113,11 @@ class Config:
 
         # Allow specific test API keys for unit testing
         test_api_keys = ["test_api_key_1234567890", "valid_test_key_12345"]
-    
-        # If it's a test key, allow it regardless of other checks
         if api_key in test_api_keys:
             return
     
         # Reject obviously fake keys
-        if api_key in ["fake_key", "fake_api_key", "123456789", "test", "test_key"]:
+        if api_key in ["fake_key", "fake_api_key"]:
             raise ValueError("Invalid API key. Please provide a valid NCBI API key.")
     
         # For all other keys (real keys), enforce minimum length
