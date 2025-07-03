@@ -149,7 +149,7 @@ def test_config_initialisation():
 def test_config_initialisation_missing_email():
     """Test Config class initialisation with missing email."""
     with pytest.raises(ValueError) as excinfo:
-        Config(email="", api_key="abc123")
+        Config(email="", api_key="valid_test_key_12345")
     assert "Email address required" in str(excinfo.value)
 
 
@@ -162,7 +162,7 @@ def test_config_initialisation_missing_api_key():
 
 def test_config_update_thresholds():
     """Test updating sequence length thresholds."""
-    config = Config(email="test@example.com", api_key="abc123")
+    config = Config(email="test@example.com", api_key="valid_test_key_12345")
     
     # Initial values
     assert config.protein_length_threshold == 500
@@ -178,7 +178,7 @@ def test_config_update_thresholds():
 
 def test_config_set_gene_search_term_rRNA():
     """Test setting gene search term for rRNA genes."""
-    config = Config(email="test@example.com", api_key="abc123")
+    config = Config(email="test@example.com", api_key="valid_test_key_12345")
     
     # Set for 16S rRNA gene
     search_type = config.set_gene_search_term("16s")
@@ -191,7 +191,7 @@ def test_config_set_gene_search_term_rRNA():
 
 def test_config_set_gene_search_term_protein_coding():
     """Test setting gene search term for protein-coding genes."""
-    config = Config(email="test@example.com", api_key="abc123")
+    config = Config(email="test@example.com", api_key="valid_test_key_12345")
     
     # Set for rbcL gene
     search_type = config.set_gene_search_term("rbcl")
@@ -204,7 +204,7 @@ def test_config_set_gene_search_term_protein_coding():
 
 def test_config_set_gene_search_term_generic():
     """Test setting gene search term for generic genes."""
-    config = Config(email="test@example.com", api_key="abc123")
+    config = Config(email="test@example.com", api_key="valid_test_key_12345")
     
     # Set for a generic gene
     search_type = config.set_gene_search_term("unknown_gene")
