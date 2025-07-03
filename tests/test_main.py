@@ -67,7 +67,7 @@ def test_main_single_taxid_mode(mock_parser, mock_make_out_dir, mock_setup_loggi
         out='/tmp/out',
         type='both',
         email='test@example.com',
-        api_key='abc123',
+        api_key='valid_test_key_12345',
         input_csv='samples.csv',  # Add a CSV file to prevent the validation error
         input_taxonomy_csv=None,
         single='9606',
