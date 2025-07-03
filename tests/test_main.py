@@ -416,11 +416,10 @@ def test_main_no_input_files(mock_parser, mock_make_out_dir, mock_setup_logging,
     mock_exit.assert_called_once_with(1)
 
 
-@patch('gene_fetch.main.sys.exit')
 @patch('gene_fetch.main.setup_logging')
 @patch('gene_fetch.main.make_out_dir')
 @patch('gene_fetch.main.setup_argument_parser')
-def test_main_credential_validation_error(mock_parser, mock_make_out_dir, mock_setup_logging, mock_exit):
+def test_main_credential_validation_error(mock_parser, mock_make_out_dir, mock_setup_logging):
     """Test main function when credential validation fails."""
 
     # Create a mock parser that returns a namespace with invalid credentials
@@ -443,10 +442,11 @@ def test_main_credential_validation_error(mock_parser, mock_make_out_dir, mock_s
     mock_parser.return_value = mock_parser_instance
 
     # Run main function - this should exit due to credential validation
-    main()
+    with pytest.raises(SystemExit) as excinfo:
+        main()
 
-    # Verify sys.exit was called
-    mock_exit.assert_called_with(1)
+    # Verify it exited with code 1
+    assert excinfo.value.code == 1
 
 
 @patch('gene_fetch.main.sys.exit')
