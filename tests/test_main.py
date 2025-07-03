@@ -417,7 +417,6 @@ def test_main_no_input_files(mock_parser, mock_make_out_dir, mock_setup_logging,
 
 
 @patch('gene_fetch.main.sys.exit')
-@patch('gene_fetch.main.Config')
 @patch('gene_fetch.main.setup_logging')
 @patch('gene_fetch.main.make_out_dir')
 @patch('gene_fetch.main.setup_argument_parser')
