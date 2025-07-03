@@ -6,6 +6,7 @@ Contains Config class and basic utility functions.
 
 import logging
 import sys
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Set, Dict, List, Any, FrozenSet
@@ -103,6 +104,16 @@ def get_process_id_column(header):
 @dataclass
 class Config:
     """Configuration class for Gene Fetch, containing all runtime settings."""
+    
+    @staticmethod
+    def validate_credentials(email: str, api_key: str) -> None:
+        """Validate email format and API key.""" 
+        if not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+            raise ValueError("Invalid email format. Please provide a valid email address.")
+    
+        if api_key == "fake_key" or api_key == "fake_api_key" or len(api_key) < 10:
+            raise ValueError("Invalid API key. Please provide a valid NCBI API key.")
+
     def __init__(self, email, api_key):
         # Email and API key required
         if not email:
@@ -116,7 +127,9 @@ class Config:
                 "to provide your API key."
             )
 
-
+        # Validate credential format
+        self.validate_credentials(email, api_key)
+        
         # Set run parameters
         self.email = email
         self.api_key = api_key
