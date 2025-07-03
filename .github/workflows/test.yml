@@ -91,7 +91,7 @@ jobs:
             -k "$NCBI_API_KEY" \
             -g cox1 \
             --type protein \
-            -s 210239 \
+            -s 7227  \
             -o test_output \
             --max-sequences 2 \
             --genbank && echo "✓ CLI single mode processing succeeded" || echo "⚠️ CLI single mode timed out or failed"
