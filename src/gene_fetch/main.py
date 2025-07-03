@@ -1,3 +1,128 @@
+# src/gene_fetch/main.py
+"""
+Command-line interface for Gene Fetch.
+Provides the entry point and argument parser for the Gene Fetch tool.
+"""
+
+import argparse
+import csv
+import sys
+import time
+from pathlib import Path
+from random import uniform
+from time import sleep
+from typing import Optional
+
+from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+
+from .core import Config, setup_logging, make_out_dir, log_progress, get_process_id_column, logger
+from .entrez_handler import EntrezHandler
+from .sequence_processor import SequenceProcessor
+from .output_manager import OutputManager, save_genbank_file
+from .processors import process_sample, process_single_taxid, process_taxid_csv, process_taxonomy_csv
+
+
+def setup_argument_parser():
+    parser = argparse.ArgumentParser(
+        description="Fetch gene sequences from NCBI databases."
+    )
+
+    parser.add_argument(
+        "-g",
+        "--gene",
+        required=True,
+        help="Name of gene to search for in NCBI RefSeq database (e.g., cox1)",
+    )
+
+    parser.add_argument(
+        "-o",
+        "--out",
+        required=True,
+        help="Path to directory to save output files (will create new directories)",
+    )
+
+    # Create mutually exclusive group for input files
+    input_group = parser.add_mutually_exclusive_group(required=False)
+    input_group.add_argument(
+        "-i",
+        "--in",
+        dest="input_csv",
+        help="Path to input CSV file containing taxIDs (must have columns "
+        '"taxID" and "ID")',
+    )
+    input_group.add_argument(
+        "-i2",
+        "--in2",
+        dest="input_taxonomy_csv",
+        help="Path to input CSV file containing taxonomic information "
+        '(must have columns "ID", "phylum", "class", "order", '
+        ' "family", "genus", "species")',
+    )
+
+    parser.add_argument(
+        "-s",
+        "--single",
+        type=str,
+        help="Single taxID to search and fetch (e.g., 7227)",
+    )
+
+    parser.add_argument(
+        "--type",
+        required=True,
+        choices=["protein", "nucleotide", "both"],
+        help="Specify sequence type to fetch (protein / nucleotide coding sequence / both)",
+    )
+
+    parser.add_argument(
+        "--protein-size",
+        type=int,
+        default=500,
+        help="Minimum protein sequence length "
+        '(default: 500. Can be bypassed by setting to zero/a negative number)',
+    )
+
+    parser.add_argument(
+        "--nucleotide-size",
+        type=int,
+        default=1000,
+        help="Minimum nucleotide sequence length"
+        '(default: 1000. Can be bypassed by setting to zero/a negative number)',
+    )
+
+    parser.add_argument(
+        "-e",
+        "--email",
+        type=str,
+        required=True,
+        help="Email to use for NCBI API requests (required)",
+    )
+
+    parser.add_argument(
+        "-k",
+        "--api-key",
+        type=str,
+        required=True,
+        help="API key to use for NCBI API requests (required)",
+    )
+
+    parser.add_argument(
+        "--max-sequences",
+        type=int,
+        default=None,
+        help="Maximum number of sequences to fetch (only works "
+        "with -s/--single)",
+    )
+
+    parser.add_argument(
+        "-b",
+        "--genbank",
+        action="store_true",
+        help="Download GenBank (.gb) files corresponding to fetched sequences",
+    )
+
+    return parser
+
 def main():
     print("Starting gene_fetch.py")
     parser = setup_argument_parser()
