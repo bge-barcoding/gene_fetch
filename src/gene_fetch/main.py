@@ -25,50 +25,50 @@ from .processors import process_sample, process_single_taxid, process_taxid_csv,
 
 def setup_argument_parser():
     parser = argparse.ArgumentParser(
-        description="Fetch gene sequences from NCBI databases."
+        description="Fetch gene and/or protein sequences from the NCBI GenBank database."
     )
 
     parser.add_argument(
-        "-g",
         "--gene",
+        "-g",
         required=True,
         help="Name of gene to search for in NCBI RefSeq database (e.g., cox1)",
     )
 
     parser.add_argument(
-        "-o",
         "--out",
+        "-o",
         required=True,
         help="Path to directory to save output files (will create new directories)",
     )
 
     # Create mutually exclusive group for input files
-    input_group = parser.add_mutually_exclusive_group(required=False)
+    input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument(
-        "-i",
         "--in",
+        "-i",
         dest="input_csv",
         help="Path to input CSV file containing taxIDs (must have columns "
         '"taxID" and "ID")',
     )
     input_group.add_argument(
-        "-i2",
         "--in2",
+        "-i2",
         dest="input_taxonomy_csv",
         help="Path to input CSV file containing taxonomic information "
         '(must have columns "ID", "phylum", "class", "order", '
         ' "family", "genus", "species")',
     )
-
-    parser.add_argument(
-        "-s",
+    input_group.add_argument(
         "--single",
+        "-s",
         type=str,
         help="Single taxID to search and fetch (e.g., 7227)",
     )
 
     parser.add_argument(
         "--type",
+        "-t",
         required=True,
         choices=["protein", "nucleotide", "both"],
         help="Specify sequence type to fetch (protein / nucleotide coding sequence / both)",
@@ -76,6 +76,7 @@ def setup_argument_parser():
 
     parser.add_argument(
         "--protein-size",
+        "-ps",
         type=int,
         default=500,
         help="Minimum protein sequence length "
@@ -84,6 +85,7 @@ def setup_argument_parser():
 
     parser.add_argument(
         "--nucleotide-size",
+        "-ns",
         type=int,
         default=1000,
         help="Minimum nucleotide sequence length"
@@ -91,16 +93,16 @@ def setup_argument_parser():
     )
 
     parser.add_argument(
-        "-e",
         "--email",
+        "-e",
         type=str,
         required=True,
         help="Email to use for NCBI API requests (required)",
     )
 
     parser.add_argument(
-        "-k",
         "--api-key",
+        "-k",
         type=str,
         required=True,
         help="API key to use for NCBI API requests (required)",
@@ -108,6 +110,7 @@ def setup_argument_parser():
 
     parser.add_argument(
         "--max-sequences",
+        "-ms",
         type=int,
         default=None,
         help="Maximum number of sequences to fetch (only works "
@@ -115,8 +118,8 @@ def setup_argument_parser():
     )
 
     parser.add_argument(
-        "-b",
         "--genbank",
+        "-gb",
         action="store_true",
         help="Download GenBank (.gb) files corresponding to fetched sequences",
     )
@@ -214,13 +217,6 @@ def main():
 
     # Create output manager
     output_manager = OutputManager(output_dir)
-
-    # Check input file requirements
-    if args.input_csv is None and args.input_taxonomy_csv is None:
-        logger.error(
-            "Error: Either input CSV file (-i/--in) or input taxonomy CSV file (-i2/--in2) must be provided"
-        )
-        sys.exit(1)
 
     # Process input samples.csv
     if args.input_csv:
