@@ -43,7 +43,7 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 
 ## Installation
 - Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment.
-- First Conda needs to be installed, which can be done from [here](https://www.anaconda.com/docs/getting-started/miniconda/install).
+- First Conda needs to be installed, which can be done from [here](https://conda-forge.org/download/).
 - Once installed:
 ```bash
 # Create new environment
