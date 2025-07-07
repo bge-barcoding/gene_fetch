@@ -47,23 +47,20 @@ def mock_output_manager():
     """Create mock OutputManager for testing."""
     with tempfile.TemporaryDirectory() as tmpdirname:
         output_dir = Path(tmpdirname)
-        manager = OutputManager(output_dir)
-        
-        # Create expected directories
-        manager.nucleotide_dir.mkdir(exist_ok=True)
-        manager.genbank_dir.mkdir(exist_ok=True)
+        # Create OutputManager with GenBank enabled for testing
+        manager = OutputManager(output_dir, save_genbank=True)
         
         # Spy on write methods using MagicMock
         manager.write_sequence_reference = MagicMock(wraps=manager.write_sequence_reference)
         manager.log_failure = MagicMock(wraps=manager.log_failure)
         manager.save_sequence_summary = MagicMock(wraps=manager.save_sequence_summary)
+        manager.save_genbank_file = MagicMock(wraps=manager.save_genbank_file)
         
         yield manager
 
 
 @patch('gene_fetch.processors.SeqIO')
-@patch('gene_fetch.processors.save_genbank_file')
-def test_process_sample_both_types(mock_save_genbank, mock_seqio, mock_processor, mock_output_manager):
+def test_process_sample_both_types(mock_seqio, mock_processor, mock_output_manager):
     """Process sample with both protein and nucleotide types."""
     # Set up test parameters
     process_id = "TEST123"
@@ -91,7 +88,7 @@ def test_process_sample_both_types(mock_save_genbank, mock_seqio, mock_processor
     assert mock_seqio.write.call_count == 2  # Once for protein, once for nucleotide
     
     # Check GenBank files were saved
-    assert mock_save_genbank.call_count == 2  # Once for protein, once for nucleotide
+    assert mock_output_manager.save_genbank_file.call_count == 2  # Once for protein, once for nucleotide
     
     # Check sequence reference was written
     mock_output_manager.write_sequence_reference.assert_called_once()
@@ -101,8 +98,7 @@ def test_process_sample_both_types(mock_save_genbank, mock_seqio, mock_processor
 
 
 @patch('gene_fetch.processors.SeqIO')
-@patch('gene_fetch.processors.save_genbank_file')
-def test_process_sample_protein_only(mock_save_genbank, mock_seqio, mock_processor, mock_output_manager):
+def test_process_sample_protein_only(mock_seqio, mock_processor, mock_output_manager):
     """Process sample with protein type only."""
     # Set up test parameters
     process_id = "TEST123"
@@ -130,7 +126,7 @@ def test_process_sample_protein_only(mock_save_genbank, mock_seqio, mock_process
     assert mock_seqio.write.call_count == 1
     
     # Check no GenBank files were saved (save_genbank=False)
-    mock_save_genbank.assert_not_called()
+    mock_output_manager.save_genbank_file.assert_not_called()
     
     # Check sequence reference was written
     mock_output_manager.write_sequence_reference.assert_called_once()
@@ -181,37 +177,43 @@ def test_process_sample_no_sequences(mock_seqio, mock_processor, mock_output_man
 
 
 @patch('gene_fetch.processors.SeqIO')
-@patch('gene_fetch.processors.make_out_dir')
-@patch('gene_fetch.processors.save_genbank_file')
-def test_process_single_taxid(mock_save_genbank, mock_make_dir, mock_seqio, mock_processor, mock_output_manager):
+@patch('gene_fetch.processors.OutputManager')
+def test_process_single_taxid(mock_output_manager_class, mock_seqio, mock_processor):
     """Process single taxid to fetch all available sequences."""
     # Set up test parameters
     taxid = "9606"
     gene_name = "rbcl"
     sequence_type = "both"
-    output_dir = mock_output_manager.output_dir
-    max_sequences = 5
     
-    # Mock multiple records return for single-taxid mode
-    protein_records = [
-        SeqRecord(Seq("ACGT" * 25), id=f"PROT{i}", description=f"Test protein {i}")
-        for i in range(1, 4)  # 3 protein records
-    ]
+    # Create a mock output manager instance
+    mock_output_manager_instance = MagicMock()
+    mock_output_manager_instance.protein_dir = Path("/tmp/protein")
+    mock_output_manager_instance.nucleotide_dir = Path("/tmp/nucleotide")
+    mock_output_manager_instance.protein_genbank_dir = Path("/tmp/genbank/protein")
+    mock_output_manager_instance.nucleotide_genbank_dir = Path("/tmp/genbank/nucleotide")
+    mock_output_manager_class.return_value = mock_output_manager_instance
     
-    nucleotide_records = [
-        SeqRecord(Seq("ACGT" * 50), id=f"NM_{i}", description=f"Test nucleotide {i}")
-        for i in range(1, 5)  # 4 nucleotide records
-    ]
-    
-    mock_processor.search_and_fetch_sequences.return_value = (
-        protein_records,
-        nucleotide_records,
-        ["Homo", "sapiens"],
-        "species:Homo sapiens"
-    )
-    
-    # Mock OutputManager creation
-    with patch('gene_fetch.processors.OutputManager', return_value=mock_output_manager):
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        output_dir = Path(tmpdirname)
+        
+        # Mock multiple records return for single-taxid mode
+        protein_records = [
+            SeqRecord(Seq("ACGT" * 25), id=f"PROT{i}", description=f"Test protein {i}")
+            for i in range(1, 4)  # 3 protein records
+        ]
+        
+        nucleotide_records = [
+            SeqRecord(Seq("ACGT" * 50), id=f"NM_{i}", description=f"Test nucleotide {i}")
+            for i in range(1, 5)  # 4 nucleotide records
+        ]
+        
+        mock_processor.search_and_fetch_sequences.return_value = (
+            protein_records,
+            nucleotide_records,
+            ["Homo", "sapiens"],
+            "species:Homo sapiens"
+        )
+        
         # Call function
         process_single_taxid(
             taxid=taxid,
@@ -219,9 +221,12 @@ def test_process_single_taxid(mock_save_genbank, mock_make_dir, mock_seqio, mock
             sequence_type=sequence_type,
             processor=mock_processor,
             output_dir=output_dir,
-            max_sequences=max_sequences,
+            max_sequences=5,
             save_genbank=True
         )
+        
+        # Check OutputManager was created with correct parameters
+        mock_output_manager_class.assert_called_once_with(output_dir, True)
         
         # Check search was performed correctly with fetch_all=True
         mock_processor.search_and_fetch_sequences.assert_called_once()
@@ -236,43 +241,49 @@ def test_process_single_taxid(mock_save_genbank, mock_make_dir, mock_seqio, mock
         assert mock_seqio.write.call_count == 7
         
         # Check GenBank files were saved
-        assert mock_save_genbank.call_count == 7
+        assert mock_output_manager_instance.save_genbank_file.call_count == 7
         
         # Check summaries were saved
-        assert mock_output_manager.save_sequence_summary.call_count == 2
+        assert mock_output_manager_instance.save_sequence_summary.call_count == 2
 
 
 @patch('gene_fetch.processors.SeqIO')
-@patch('gene_fetch.processors.make_out_dir')
-def test_process_single_taxid_max_limit(mock_make_dir, mock_seqio, mock_processor, mock_output_manager):
+@patch('gene_fetch.processors.OutputManager')
+def test_process_single_taxid_max_limit(mock_output_manager_class, mock_seqio, mock_processor):
     """Process single taxid with max limit that actually limits the results."""
     # Set up test parameters
     taxid = "9606"
     gene_name = "rbcl"
     sequence_type = "both"
-    output_dir = mock_output_manager.output_dir
     max_sequences = 2  # Limit to 2 sequences of each type
     
-    # Mock multiple records return for single-taxid mode
-    protein_records = [
-        SeqRecord(Seq("ACGT" * 25), id=f"PROT{i}", description=f"Test protein {i}")
-        for i in range(1, 6)  # 5 records
-    ]
+    # Create a mock output manager instance
+    mock_output_manager_instance = MagicMock()
+    mock_output_manager_instance.protein_dir = Path("/tmp/protein")
+    mock_output_manager_instance.nucleotide_dir = Path("/tmp/nucleotide")
+    mock_output_manager_class.return_value = mock_output_manager_instance
     
-    nucleotide_records = [
-        SeqRecord(Seq("ACGT" * 50), id=f"NM_{i}", description=f"Test nucleotide {i}")
-        for i in range(1, 7)  # 6 records
-    ]
-    
-    mock_processor.search_and_fetch_sequences.return_value = (
-        protein_records,
-        nucleotide_records,
-        ["Homo", "sapiens"],
-        "species:Homo sapiens"
-    )
-    
-    # Mock OutputManager creation
-    with patch('gene_fetch.processors.OutputManager', return_value=mock_output_manager):
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        output_dir = Path(tmpdirname)
+        
+        # Mock multiple records return for single-taxid mode
+        protein_records = [
+            SeqRecord(Seq("ACGT" * 25), id=f"PROT{i}", description=f"Test protein {i}")
+            for i in range(1, 6)  # 5 records
+        ]
+        
+        nucleotide_records = [
+            SeqRecord(Seq("ACGT" * 50), id=f"NM_{i}", description=f"Test nucleotide {i}")
+            for i in range(1, 7)  # 6 records
+        ]
+        
+        mock_processor.search_and_fetch_sequences.return_value = (
+            protein_records,
+            nucleotide_records,
+            ["Homo", "sapiens"],
+            "species:Homo sapiens"
+        )
+        
         # Call function
         process_single_taxid(
             taxid=taxid,
@@ -288,7 +299,7 @@ def test_process_single_taxid_max_limit(mock_make_dir, mock_seqio, mock_processo
         assert mock_seqio.write.call_count == 4  # 2 proteins + 2 nucleotides
         
         # Check summaries were saved with the limited sequences
-        call_args_list = mock_output_manager.save_sequence_summary.call_args_list
+        call_args_list = mock_output_manager_instance.save_sequence_summary.call_args_list
         assert len(call_args_list) == 2
         
         # Verify first call (protein)
@@ -445,9 +456,9 @@ def test_process_taxonomy_csv_missing_columns(
     gene_name = "rbcl"
     sequence_type = "both"
     
-    # Mock CSV reader - missing species column
+    # Mock CSV reader - missing all taxonomic columns
     mock_get_process_id.return_value = "ID"
-    mock_dict_reader.return_value.fieldnames = ["ID", "genus", "family"]
+    mock_dict_reader.return_value.fieldnames = ["ID", "description", "notes"]
     
     # Mock EntrezHandler
     mock_entrez = MagicMock(spec=EntrezHandler)

@@ -13,20 +13,35 @@ from Bio.Seq import Seq
 
 @pytest.fixture
 def output_manager():
-    """Create OutputManager instance for testing with temp dir."""
+    """Create OutputManager instance for testing with temp dir (no GenBank)."""
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Create OutputManager with the temporary directory
         output_dir = Path(tmpdirname)
-        manager = OutputManager(output_dir)
+        manager = OutputManager(output_dir, save_genbank=False)
         yield manager
 
 
-def test_initialization(output_manager):
-    """OutputManager initialises correctly with required dirs and files."""
+@pytest.fixture
+def output_manager_with_genbank():
+    """Create OutputManager instance for testing with temp dir (with GenBank)."""
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Create OutputManager with the temporary directory and GenBank enabled
+        output_dir = Path(tmpdirname)
+        manager = OutputManager(output_dir, save_genbank=True)
+        yield manager
+
+
+def test_initialisation(output_manager):
+    """OutputManager initialises correctly with required dirs and files (no GenBank)."""
     # Check if dirs created
     assert output_manager.output_dir.exists()
+    assert output_manager.protein_dir.exists()
     assert output_manager.nucleotide_dir.exists()
-    assert output_manager.genbank_dir.exists()
+    
+    # GenBank directories should not be created when save_genbank=False
+    assert output_manager.genbank_dir is None
+    assert output_manager.protein_genbank_dir is None
+    assert output_manager.nucleotide_genbank_dir is None
     
     # Check if files created with correct headers
     assert output_manager.failed_searches_path.exists()
@@ -48,6 +63,19 @@ def test_initialization(output_manager):
             "ncbi_taxonomy", "reference_name", "protein_reference_path", 
             "nucleotide_reference_path"
         ]
+
+
+def test_initialisation_with_genbank(output_manager_with_genbank):
+    """OutputManager initialises correctly with GenBank dirs when enabled."""
+    # Check if dirs created
+    assert output_manager_with_genbank.output_dir.exists()
+    assert output_manager_with_genbank.protein_dir.exists()
+    assert output_manager_with_genbank.nucleotide_dir.exists()
+    
+    # GenBank directories should be created when save_genbank=True
+    assert output_manager_with_genbank.genbank_dir.exists()
+    assert output_manager_with_genbank.protein_genbank_dir.exists()
+    assert output_manager_with_genbank.nucleotide_genbank_dir.exists()
 
 
 def test_log_failure(output_manager):
@@ -134,7 +162,7 @@ def test_save_sequence_summary(output_manager):
 
 
 @patch('gene_fetch.output_manager.EntrezHandler')
-def test_save_genbank_file(mock_entrez, output_manager):
+def test_save_genbank_file(mock_entrez, output_manager_with_genbank):
     """Save GenBank file fetched from NCBI."""
     # Create mock handle with test content
     mock_handle = MagicMock()
@@ -147,10 +175,10 @@ def test_save_genbank_file(mock_entrez, output_manager):
     # Define test parameters
     record_id = "NM_12345"
     db = "nucleotide"
-    output_path = output_manager.genbank_dir / "test_genbank.gb"
+    output_path = output_manager_with_genbank.nucleotide_genbank_dir / "test_genbank.gb"
     
     # Call method
-    result = output_manager.save_genbank_file(mock_entrez_instance, record_id, db, output_path)
+    result = output_manager_with_genbank.save_genbank_file(mock_entrez_instance, record_id, db, output_path)
     
     # Verify result and file
     assert result is True
@@ -168,7 +196,7 @@ def test_save_genbank_file(mock_entrez, output_manager):
 
 
 @patch('gene_fetch.output_manager.EntrezHandler')
-def test_save_genbank_file_error(mock_entrez, output_manager):
+def test_save_genbank_file_error(mock_entrez, output_manager_with_genbank):
     """Handle of errors when saving a GenBank file."""
     # Mock EntrezHandler's fetch method to raise an exception
     mock_entrez_instance = MagicMock()
@@ -177,44 +205,29 @@ def test_save_genbank_file_error(mock_entrez, output_manager):
     # Define test parameters
     record_id = "NM_12345"
     db = "nucleotide"
-    output_path = output_manager.genbank_dir / "test_error.gb"
+    output_path = output_manager_with_genbank.nucleotide_genbank_dir / "test_error.gb"
     
     # Call method
-    result = output_manager.save_genbank_file(mock_entrez_instance, record_id, db, output_path)
+    result = output_manager_with_genbank.save_genbank_file(mock_entrez_instance, record_id, db, output_path)
     
     # Verify result
     assert result is False
     assert not output_path.exists()
 
 
-def test_standalone_save_genbank_file():
-    """Test standalone save_genbank_file function."""
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        # Set up test parameters
-        output_dir = Path(tmpdirname)
-        output_path = output_dir / "test_genbank.gb"
-        
-        # Mock EntrezHandler
-        mock_entrez = MagicMock()
-        mock_handle = MagicMock()
-        mock_handle.read.return_value = "STANDALONE MOCK CONTENT"
-        mock_entrez.fetch.return_value = mock_handle
-        
-        # Import standalone function
-        from gene_fetch.output_manager import save_genbank_file
-        
-        # Call function
-        with patch('gene_fetch.output_manager.OutputManager') as mock_output_manager:
-            # Set up mock OutputManager
-            mock_instance = MagicMock()
-            mock_instance.save_genbank_file.return_value = True
-            mock_output_manager.return_value = mock_instance
-            
-            # Call standalone function
-            result = save_genbank_file(mock_entrez, "NM_12345", "nucleotide", output_path)
-            
-            # Verify result
-            assert result is True
-            mock_instance.save_genbank_file.assert_called_once_with(
-                mock_entrez, "NM_12345", "nucleotide", output_path
-            )
+def test_save_genbank_file_disabled(output_manager):
+    """Test GenBank file saving when disabled."""
+    # Mock EntrezHandler
+    mock_entrez_instance = MagicMock()
+    
+    # Define test parameters
+    record_id = "NM_12345"
+    db = "nucleotide"
+    output_path = Path("/tmp/test_genbank.gb")  # Dummy path
+    
+    # Call method with save_genbank=False
+    result = output_manager.save_genbank_file(mock_entrez_instance, record_id, db, output_path)
+    
+    # Verify result is False and no fetch was called
+    assert result is False
+    mock_entrez_instance.fetch.assert_not_called()
