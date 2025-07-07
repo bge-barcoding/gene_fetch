@@ -22,10 +22,22 @@ from .entrez_handler import EntrezHandler
 # Output file and directory management
 # =============================================================================
 class OutputManager:
-    def __init__(self, output_dir: Path):
+    def __init__(self, output_dir: Path, save_genbank: bool = False):
         self.output_dir = output_dir
+        self.protein_dir = output_dir / "protein"
         self.nucleotide_dir = output_dir / "nucleotide"
-        self.genbank_dir = output_dir / "genbank"
+        self.save_genbank = save_genbank
+        
+        # Only set up GenBank paths if needed
+        if save_genbank:
+            self.genbank_dir = output_dir / "genbank"
+            self.protein_genbank_dir = self.genbank_dir / "protein"
+            self.nucleotide_genbank_dir = self.genbank_dir / "nucleotide"
+        else:
+            self.genbank_dir = None
+            self.protein_genbank_dir = None
+            self.nucleotide_genbank_dir = None
+
         self.failed_searches_path = output_dir / "failed_searches.csv"
         self.sequence_refs_path = output_dir / "sequence_references.csv"
 
@@ -35,8 +47,14 @@ class OutputManager:
     # Create main output directories
     def _setup_directories(self):
         make_out_dir(self.output_dir)
+        make_out_dir(self.protein_dir)
         make_out_dir(self.nucleotide_dir)
-        make_out_dir(self.genbank_dir)
+        
+        # Only create GenBank directories if needed
+        if self.save_genbank:
+            make_out_dir(self.genbank_dir)
+            make_out_dir(self.protein_genbank_dir)
+            make_out_dir(self.nucleotide_genbank_dir)
 
     # Initialize output csv files and headers
     def _setup_files(self):
@@ -122,6 +140,10 @@ class OutputManager:
     # Fetch and save GenBank file for a specific record ID
     def save_genbank_file(self, entrez: EntrezHandler, record_id: str, db: str, output_path: Path):
         """Fetch and save GenBank file for a specific record ID."""
+        if not self.save_genbank:
+            logger.warning("GenBank saving was not enabled - skipping file save")
+            return False
+        
         try:
             logger.info(f"Fetching GenBank file for {db} record {record_id}")
             handle = entrez.fetch(db=db, id=record_id, rettype="gb", retmode="text")
@@ -140,10 +162,3 @@ class OutputManager:
             logger.error("Full error details:", exc_info=True)
             return False
 
-
-# Standalone function for backward compatibility
-def save_genbank_file(entrez: EntrezHandler, record_id: str, db: str, output_path: Path):
-    """Standalone function that delegates to a temporary OutputManager instance."""
-    output_dir = output_path.parent
-    output_manager = OutputManager(output_dir)
-    return output_manager.save_genbank_file(entrez, record_id, db, output_path)

@@ -19,7 +19,7 @@ from Bio.SeqRecord import SeqRecord
 from .core import Config, setup_logging, make_out_dir, log_progress, get_process_id_column, logger
 from .entrez_handler import EntrezHandler
 from .sequence_processor import SequenceProcessor
-from .output_manager import OutputManager, save_genbank_file
+from .output_manager import OutputManager
 from .processors import process_sample, process_single_taxid, process_taxid_csv, process_taxonomy_csv
 
 
@@ -127,20 +127,21 @@ def setup_argument_parser():
     return parser
 
 def main():
-    print("Starting gene_fetch.py")
+    print("======   Starting Gene Fetch   ======")
+    print("Written by Dan Parsons & Ben Price, Natural History Museum London")
+    print("")
     parser = setup_argument_parser()
     args = parser.parse_args()
     
     # Validate NCBI credentials first
-    print(f"DEBUG: Validating NCBI credentials: email='{args.email}', api_key='{args.api_key}'")
+    print(f"Validating NCBI credentials: email='{args.email}', api_key='{args.api_key}'")
     try:
         Config.validate_credentials(args.email, args.api_key)
-        print("DEBUG: Credential validation passed")
+        print("Credential validation passed")
     except ValueError as e:
         print(f"ERROR: Credential validation failed: {e}")
-        print("DEBUG: About to call sys.exit(1)")
+        print("Exiting script")
         sys.exit(1)
-    print("DEBUG: Continuing after credential validation")
 
     gene_name = args.gene.lower()
     output_dir = Path(args.out)
@@ -216,7 +217,7 @@ def main():
         )
 
     # Create output manager
-    output_manager = OutputManager(output_dir)
+    output_manager = OutputManager(output_dir, save_genbank)
 
     # Process input samples.csv
     if args.input_csv:

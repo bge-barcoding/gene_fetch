@@ -325,7 +325,7 @@ class EntrezHandler:
         # Log fetched sample taxonomy
         logger.info(
             f"Attempting to fetch taxid for Species: {species}, Genus: {genus},"
-            f"Family: {family}, Order: {order}, Class: {class_name}, Phylum: {phylum})"
+            f" Family: {family}, Order: {order}, Class: {class_name}, Phylum: {phylum})"
         )
 
         # Store the provided taxonomy for validation

@@ -140,6 +140,7 @@ gene-fetch -e your.email@domain.com -k your_api_key \
 
 
 ## Input
+- See `data/` for the template input files listed below.
 **Example 'samples.csv' input file (-i/--in)**
 | ID | taxid |
 | --- | --- |

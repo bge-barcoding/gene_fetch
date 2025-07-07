@@ -19,7 +19,7 @@ from Bio.SeqRecord import SeqRecord
 from .core import logger, make_out_dir, log_progress, get_process_id_column
 from .entrez_handler import EntrezHandler
 from .sequence_processor import SequenceProcessor
-from .output_manager import OutputManager, save_genbank_file
+from .output_manager import OutputManager
 
 
 # =============================================================================
@@ -37,12 +37,14 @@ def process_sample(
 ) -> None:
     try:
         # Define output paths
-        protein_path = output_manager.output_dir / f"{process_id}.fasta"
-        nucleotide_path = output_manager.nucleotide_dir / f"{process_id}_dna.fasta"
+        protein_path = output_manager.protein_dir / f"{process_id}.fasta"
+        nucleotide_path = output_manager.nucleotide_dir / f"{process_id}.fasta"
 
         # Define GenBank paths if needed
-        protein_gb_path = output_manager.genbank_dir / f"{process_id}.gb"
-        nucleotide_gb_path = output_manager.genbank_dir / f"{process_id}_dna.gb"
+        # Define GenBank paths if needed
+        if save_genbank:
+            protein_gb_path = output_manager.protein_genbank_dir / f"{process_id}.gb"
+            nucleotide_gb_path = output_manager.nucleotide_genbank_dir / f"{process_id}.gb"
 
         # Check if files already exist
         if (sequence_type in ["protein", "both"] and protein_path.exists()) or (
@@ -91,8 +93,8 @@ def process_sample(
 
                 # Download GenBank file if requested
                 if save_genbank:
-                    save_genbank_file(
-                        processor.entrez, original_id, "protein", protein_gb_path
+                    output_manager.save_genbank_file(
+                       processor.entrez, original_id, "protein", protein_gb_path
                     )
 
             except Exception as e:
@@ -123,8 +125,8 @@ def process_sample(
 
                 # Download GenBank file if requested
                 if save_genbank:
-                    save_genbank_file(
-                        processor.entrez, original_id, "nucleotide", nucleotide_gb_path
+                    output_manager.save_genbank_file(
+                       processor.entrez, original_id, "nucleotide", nucleotide_gb_path
                     )
 
             except Exception as e:
@@ -154,7 +156,7 @@ def process_single_taxid(
     save_genbank: bool = False,
 ) -> None:
     try:
-        # Initialize progress counters
+        # Initialise progress counters
         progress_counters = {
             "sequence_counter": 0,
             "max_sequences": max_sequences,
@@ -192,7 +194,7 @@ def process_single_taxid(
                     nucleotide_records = nucleotide_records[:max_sequences]
 
         # Create output manager
-        output_manager = OutputManager(output_dir)
+        output_manager = OutputManager(output_dir, save_genbank)
 
         # Save protein sequences
         if sequence_type in ["protein", "both"] and protein_records:
@@ -202,7 +204,7 @@ def process_single_taxid(
 
                 # Save FASTA
                 filename = f"{record.id}.fasta"
-                output_path = output_dir / filename
+                output_path = output_manager.protein_dir / filename
                 SeqIO.write(record, output_path, "fasta")
                 logger.info(
                     f"Written protein sequence {i+1}/{len(protein_records)} to '{output_path}'"
@@ -210,8 +212,8 @@ def process_single_taxid(
 
                 # Save GenBank if requested
                 if save_genbank:
-                    gb_path = output_manager.genbank_dir / f"{record.id}.gb"
-                    save_genbank_file(processor.entrez, original_id, "protein", gb_path)
+                    gb_path = output_manager.protein_genbank_dir / f"{record.id}.gb"
+                    output_manager.save_genbank_file(processor.entrez, original_id, "protein", gb_path)
 
             # Use output manager to save summary
             output_manager.save_sequence_summary(protein_records, "protein")
@@ -227,15 +229,13 @@ def process_single_taxid(
 
         # Save nucleotide sequences
         if sequence_type in ["nucleotide", "both"] and nucleotide_records:
-            nucleotide_dir = output_dir / "nucleotide"
-            make_out_dir(nucleotide_dir)
             for i, record in enumerate(nucleotide_records):
                 # Store original ID for GenBank download
                 original_id = record.id
 
                 # Save FASTA
                 filename = f"{record.id}.fasta"
-                output_path = nucleotide_dir / filename
+                output_path = output_manager.nucleotide_dir / filename
                 SeqIO.write(record, output_path, "fasta")
                 logger.info(
                     f"Written nucleotide sequence {i+1}/{len(nucleotide_records)} to '{output_path}'"
@@ -243,10 +243,8 @@ def process_single_taxid(
 
                 # Save GenBank if requested
                 if save_genbank:
-                    gb_path = output_manager.genbank_dir / f"{record.id}.gb"
-                    save_genbank_file(
-                        processor.entrez, original_id, "nucleotide", gb_path
-                    )
+                    gb_path = output_manager.nucleotide_genbank_dir / f"{record.id}.gb"
+                    output_manager.save_genbank_file(processor.entrez, original_id, "nucleotide", gb_path)
 
             # Use output manager to save summary
             output_manager.save_sequence_summary(nucleotide_records, "nucleotide")
@@ -271,7 +269,7 @@ def process_taxid_csv(
 ):
     try:
         samples_csv = Path(csv_path)
-        logger.info(f"Samples file: {samples_csv}")
+        logger.debug(f"Samples file: {samples_csv}")
 
         with open(samples_csv, newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
@@ -346,21 +344,28 @@ def process_taxonomy_csv(
         with open(taxonomy_csv, "r", newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
 
-            # Check for required columns
-            required_columns = ["ID", "genus", "species"]
-            missing_columns = [
-                col
-                for col in required_columns
-                if col.lower() not in [field.lower() for field in reader.fieldnames]
+            # Check for required ID column
+            if "id" not in [field.lower() for field in reader.fieldnames]:
+                logger.error("Missing required 'ID' column in taxonomy CSV")
+                sys.exit(1)
+
+            # Check for at least one taxonomic rank column
+            taxonomic_columns = ["phylum", "class", "order", "family", "genus", "species"]
+            available_taxonomic_columns = [
+                col for col in taxonomic_columns 
+                if col.lower() in [field.lower() for field in reader.fieldnames]
             ]
-            if missing_columns:
+
+            if not available_taxonomic_columns:
                 logger.error(
-                    f"Missing required columns in taxonomy CSV: {missing_columns}"
+                    f"CSV must contain at least one taxonomic rank column from: {taxonomic_columns}"
                 )
                 logger.error(
-                    "CSV must contain at least 'ID', 'genus', and 'species' columns"
+                    f"Available columns: {list(reader.fieldnames)}"
                 )
                 sys.exit(1)
+
+            logger.info(f"Found taxonomic columns: {available_taxonomic_columns}")
 
             # Map actual column names to expected column names (case-insensitive)
             column_map = {}
@@ -436,16 +441,14 @@ def process_taxonomy_csv(
                         else ""
                     )
 
-                    # Validate required fields
-                    if not genus or not species:
-                        logger.warning(
-                            f"Missing required genus or species for {process_id}"
+                    # Validate we have at least some taxonomic information
+                    if not any([phylum, class_name, order, family, genus, species]):
+                        logger.warning(f"No taxonomic information provided for {process_id}"
                         )
                         output_manager.log_failure(
-                            process_id,
-                            "unknown",
-                            "Missing required taxonomy fields",
-                        )
+                            process_id, 
+                            "unknown", 
+                            "No taxonomic information provided")
                         continue
 
                     # Fetch taxid from taxonomic information
