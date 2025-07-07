@@ -43,7 +43,7 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 
 ## Installation
 - Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment.
-- First Conda needs to be installed, which can be done from [here](https://conda-forge.org/download/).
+- First Conda needs to be installed, which can be done from [here](https://www.anaconda.com/docs/getting-started/miniconda/install).
 - Once installed:
 ```bash
 # Create new environment
@@ -97,22 +97,22 @@ pytest
 
 ## Usage
 ```bash
-gene-fetch -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o/--out <output_directory> 
+gene-fetch --gene <gene_name> --type <sequence_type> --in <samples.csv> --out <output_directory> --email example@example.co.uk --api-key 1234567890
 ```
 * `--help`: Show usage help and exit.
 
 ### Required arguments
 * `-g/--gene`: Name of gene to search for in NCBI GenBank database (e.g., cox1/16s/rbcl).
-* `--type`: Sequence type to fetch; 'protein', 'nucleotide', or 'both' ('both' will initially search and fetch a protein sequence, and then fetches the corresponding nucleotide CDS for that protein sequence).
+* `-t/--type`: Sequence type to fetch; 'protein', 'nucleotide', or 'both' ('both' will initially search and fetch a protein sequence, and then fetches the corresponding nucleotide CDS for that protein sequence).
 * `-i/--in`: Path to input CSV file containing sample IDs and TaxIDs (see [Input](#input) section below).
 * `-i2/--in2`: Path to alternative input CSV file containing sample IDs and taxonomic information for each sample (see [Input](#input) section below).
 * `o/--out`: Path to output directory. The directory will be created if it does not exist.
 * `e/--email` and `-k/--api-key`: Email address and associated API key for NCBI account. An NCBI account is required to run this tool (due to otherwise strict API limitations) - information on how to create an NCBI account and find your API key can be found [here](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
 ### Optional arguments
-* `--protein-size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500).
-* `--nucleotide-size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1000).
+* `-ps/--protein-size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500).
+* `-ns/--nucleotide-size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1000).
 * `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` are ignored when run with `-s` mode). 'single' mode will fetch all (or N if specifying `--max-sequences`) target gene or protein sequences on GenBank for a specific taxonomic ID.
-* `--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
+* `-ms/--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
 * `-b/--genbank`: Saves genbank (.gb) files for fetched nucleotide and/or protein sequences to `genbank/` (applies when run in 'batch' or 'single' mode).
 
 
@@ -120,27 +120,26 @@ gene-fetch -g/--gene <gene_name> --type <sequence_type> -i/--in <samples.csv> -o
 Fetch both protein and nucleotide sequences for COI with default sequence length thresholds, and store the corresponding genbank records.
 ```
 gene-fetch -e your.email@domain.com -k your_api_key \
-            -g cox1 -o ./output_dir -i ./samples.csv \
+            -g cox1 -o ./output_dir -i ./data/samples.csv \
             --type both --genbank
 ```
 
-Fetch rbcL nucleotide sequences using sample taxonomic information, applying a minimum nucleotide sequence length of 1000bp
+Fetch COI nucleotide sequences using sample taxonomic information, applying a minimum nucleotide sequence length of 1000bp
 ```
 gene-fetch -e your.email@domain.com -k your_api_key \
-            -g rbcl -o ./output_dir -i2 ./taxonomy.csv \
+            -g cox1 -o ./output_dir -i2 .data/samples_taxonomy.csv \
             --type nucleotide --nucleotide-size 1000
 ```
 
-Retrieve 1000 available matK protein sequences >400aa for _Arabidopsis thaliana_ (taxid: 3702).
+Retrieve 1000 available rbcL protein sequences >400aa for _Arabidopsis thaliana_ (taxid: 3702).
 ```
 gene-fetch -e your.email@domain.com -k your_api_key \
-            -g matk -o ./output_dir -s 3702 \
+            -g rbcL -o ./output_dir -s 3702 \
             --type protein --protein-size 400 --max-sequences 1000
 ```
 
 
 ## Input
-- See `data/` for the template input files listed below.
 **Example 'samples.csv' input file (-i/--in)**
 | ID | taxid |
 | --- | --- |
@@ -154,19 +153,23 @@ gene-fetch -e your.email@domain.com -k your_api_key \
 | sample-1  | Arthropoda | Insecta | Diptera | Acroceridae | Astomella | |
 | sample-2 | Arthropoda | Insecta | Hemiptera | Cicadellidae | Psammotettix | Psammotettix sabulicola |
 | sample-3 | Arthropoda | Insecta | Trichoptera | Limnephilidae | Dicosmoecus | Dicosmoecus palatus |
-* Leave blank if taxonomic information not known/needed
+* Leave blank if taxonomic information not known/needed. At least one rank must be supplied for each sample.
 
 ## Output
 ### 'Batch' mode
 ```
 output_dir/
 ├── genbank/                    # Genbank (.gb) files for each fetched nucleotide and/or protein sequence.
+│   ├── nucleotide/  
+│   ├── protein/  
 ├── nucleotide/                 # Nucleotide sequences. Only populated if '--type nucleotide/both' utilised.
-│   ├── sample-1_dna.fasta   
-│   ├── sample-2_dna.fasta
+│   ├── sample-1.fasta   
+│   ├── sample-2.fasta
 │   └── ...
-├── sample-1.fasta              # Protein sequences.
-├── sample-2.fasta
+├── protein/                    # Protein sequences. Only populated if '--type protein/both' utilised.
+│   ├── sample-1.fasta   
+│   ├── sample-2.fasta
+│   └── ...
 ├── sequence_references.csv     # Sequence metadata.
 ├── failed_searches.csv         # Failed search attempts (if any).
 └── gene_fetch.log              # Log.
@@ -190,8 +193,8 @@ output_dir/
 │   └── ...
 ├── ACCESSION1.fasta                 # Protein sequences.
 ├── ACCESSION2.fasta
-├── fetched_nucleotide_sequences.csv # Only populated if '--type nucleotide/both' utilised. Sequence metadata.
-├── fetched_protein_sequences.csv    # Only populated if '--type protein/both' utilised. Sequence metadata.
+├── fetched_nucleotide_sequences.csv # Sequence metadata. Only populated if '--type nucleotide/both' utilised.
+├── fetched_protein_sequences.csv    # Sequence metadata. Only populated if '--type protein/both' utilised.
 ├── failed_searches.csv              # Failed search attempts (if any).
 └── gene_fetch.log                   # Log.
 ```

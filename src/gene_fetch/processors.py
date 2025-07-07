@@ -193,10 +193,10 @@ def process_single_taxid(
                     )
                     nucleotide_records = nucleotide_records[:max_sequences]
 
-        # Create output manager
-        output_manager = OutputManager(output_dir, save_genbank)
+        # Create output manager (disable sequence_references.csv for single mode)
+        output_manager = OutputManager(output_dir, save_genbank, create_sequence_refs=False)
 
-        # Save protein sequences
+        # Save protein sequences (only if protein type requested and sequences found)
         if sequence_type in ["protein", "both"] and protein_records:
             for i, record in enumerate(protein_records):
                 # Store original ID for GenBank download
@@ -215,7 +215,7 @@ def process_single_taxid(
                     gb_path = output_manager.protein_genbank_dir / f"{record.id}.gb"
                     output_manager.save_genbank_file(processor.entrez, original_id, "protein", gb_path)
 
-            # Use output manager to save summary
+            # Save summary (only if sequences were found)
             output_manager.save_sequence_summary(protein_records, "protein")
             logger.info(
                 "======================================================================================="
@@ -227,7 +227,7 @@ def process_single_taxid(
                 "======================================================================================="
             )
 
-        # Save nucleotide sequences
+        # Save nucleotide sequences (only if nucleotide type requested and sequences found)
         if sequence_type in ["nucleotide", "both"] and nucleotide_records:
             for i, record in enumerate(nucleotide_records):
                 # Store original ID for GenBank download
@@ -246,7 +246,7 @@ def process_single_taxid(
                     gb_path = output_manager.nucleotide_genbank_dir / f"{record.id}.gb"
                     output_manager.save_genbank_file(processor.entrez, original_id, "nucleotide", gb_path)
 
-            # Use output manager to save summary
+            # Save summary (only if sequences were found)
             output_manager.save_sequence_summary(nucleotide_records, "nucleotide")
             logger.info(
                 "======================================================================================="

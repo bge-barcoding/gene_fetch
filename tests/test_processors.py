@@ -47,8 +47,8 @@ def mock_output_manager():
     """Create mock OutputManager for testing."""
     with tempfile.TemporaryDirectory() as tmpdirname:
         output_dir = Path(tmpdirname)
-        # Create OutputManager with GenBank enabled for testing
-        manager = OutputManager(output_dir, save_genbank=True)
+        # Create OutputManager with GenBank enabled and sequence refs enabled for testing
+        manager = OutputManager(output_dir, save_genbank=True, create_sequence_refs=True)
         
         # Spy on write methods using MagicMock
         manager.write_sequence_reference = MagicMock(wraps=manager.write_sequence_reference)
@@ -226,7 +226,7 @@ def test_process_single_taxid(mock_output_manager_class, mock_seqio, mock_proces
         )
         
         # Check OutputManager was created with correct parameters
-        mock_output_manager_class.assert_called_once_with(output_dir, True)
+        mock_output_manager_class.assert_called_once_with(output_dir, True, create_sequence_refs=False)
         
         # Check search was performed correctly with fetch_all=True
         mock_processor.search_and_fetch_sequences.assert_called_once()

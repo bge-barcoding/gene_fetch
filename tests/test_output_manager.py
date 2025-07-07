@@ -17,7 +17,7 @@ def output_manager():
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Create OutputManager with the temporary directory
         output_dir = Path(tmpdirname)
-        manager = OutputManager(output_dir, save_genbank=False)
+        manager = OutputManager(output_dir, save_genbank=False, create_sequence_refs=True)
         yield manager
 
 
@@ -27,7 +27,7 @@ def output_manager_with_genbank():
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Create OutputManager with the temporary directory and GenBank enabled
         output_dir = Path(tmpdirname)
-        manager = OutputManager(output_dir, save_genbank=True)
+        manager = OutputManager(output_dir, save_genbank=True, create_sequence_refs=True)
         yield manager
 
 
@@ -231,3 +231,50 @@ def test_save_genbank_file_disabled(output_manager):
     # Verify result is False and no fetch was called
     assert result is False
     mock_entrez_instance.fetch.assert_not_called()
+    
+@pytest.fixture
+def output_manager_no_refs():
+    """Create OutputManager instance for testing with temp dir (no sequence refs)."""
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Create OutputManager with the temporary directory but no sequence references
+        output_dir = Path(tmpdirname)
+        manager = OutputManager(output_dir, save_genbank=False, create_sequence_refs=False)
+        yield manager
+
+
+def test_initialisation_no_sequence_refs(output_manager_no_refs):
+    """OutputManager initialises correctly without sequence_references.csv."""
+    # Check if dirs created
+    assert output_manager_no_refs.output_dir.exists()
+    assert output_manager_no_refs.protein_dir.exists()
+    assert output_manager_no_refs.nucleotide_dir.exists()
+    
+    # sequence_refs_path should be None
+    assert output_manager_no_refs.sequence_refs_path is None
+    
+    # Check if failed_searches.csv was still created
+    assert output_manager_no_refs.failed_searches_path.exists()
+    
+    # Verify headers in failed_searches.csv
+    with open(output_manager_no_refs.failed_searches_path, 'r') as f:
+        reader = csv.reader(f)
+        header = next(reader)
+        assert header == ["process_id", "taxid", "error_type", "timestamp"]
+
+
+def test_write_sequence_reference_disabled(output_manager_no_refs):
+    """Test that write_sequence_reference does nothing when disabled."""
+    # Create test data
+    test_data = {
+        "process_id": "test_process",
+        "taxid": "9606",
+        "protein_accession": "P12345",
+        "protein_length": "500"
+    }
+    
+    # This should not raise an error and should not create any file
+    output_manager_no_refs.write_sequence_reference(test_data)
+    
+    # Verify no sequence_references.csv was created
+    sequence_refs_path = output_manager_no_refs.output_dir / "sequence_references.csv"
+    assert not sequence_refs_path.exists()

@@ -217,8 +217,8 @@ def main():
         )
 
     # Create output manager
-    output_manager = OutputManager(output_dir, save_genbank)
-
+    output_manager = OutputManager(output_dir, save_genbank, create_sequence_refs=True)
+    
     # Process input samples.csv
     if args.input_csv:
         logger.info(

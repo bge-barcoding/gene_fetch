@@ -22,11 +22,12 @@ from .entrez_handler import EntrezHandler
 # Output file and directory management
 # =============================================================================
 class OutputManager:
-    def __init__(self, output_dir: Path, save_genbank: bool = False):
+    def __init__(self, output_dir: Path, save_genbank: bool = False, create_sequence_refs: bool = True):
         self.output_dir = output_dir
         self.protein_dir = output_dir / "protein"
         self.nucleotide_dir = output_dir / "nucleotide"
         self.save_genbank = save_genbank
+        self.create_sequence_refs = create_sequence_refs
         
         # Only set up GenBank paths if needed
         if save_genbank:
@@ -39,7 +40,12 @@ class OutputManager:
             self.nucleotide_genbank_dir = None
 
         self.failed_searches_path = output_dir / "failed_searches.csv"
-        self.sequence_refs_path = output_dir / "sequence_references.csv"
+        
+        # Only set up sequence references if needed
+        if create_sequence_refs:
+            self.sequence_refs_path = output_dir / "sequence_references.csv"
+        else:
+            self.sequence_refs_path = None
 
         self._setup_directories()
         self._setup_files()
@@ -63,7 +69,8 @@ class OutputManager:
                 writer = csv.writer(f)
                 writer.writerow(["process_id", "taxid", "error_type", "timestamp"])
 
-        if not self.sequence_refs_path.exists():
+        # Only create sequence_references.csv if needed
+        if self.create_sequence_refs and not self.sequence_refs_path.exists():
             with open(self.sequence_refs_path, "w", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow(
@@ -97,6 +104,11 @@ class OutputManager:
 
     # Write fetched sequence metadata to main output csv
     def write_sequence_reference(self, data: Dict[str, Any]):
+        # Only write if sequence_references.csv was created
+        if not self.create_sequence_refs:
+            logger.debug("Skipping sequence reference write - not enabled for this mode")
+            return
+            
         with open(self.sequence_refs_path, "a", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(
@@ -161,4 +173,3 @@ class OutputManager:
             logger.error(f"Error saving GenBank file for {record_id}: {e}")
             logger.error("Full error details:", exc_info=True)
             return False
-
