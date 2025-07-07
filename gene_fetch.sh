@@ -15,9 +15,9 @@
 
 
 # NCBI API parameters
-EMAIL=d.parsons@nhm.ac.uk
+EMAIL=example@example.ac.uk
 
-API_KEY="1866f9734a06f26bc5895a84387542ac9308"
+API_KEY="XYZ"
 
 
 # Gene search variables
@@ -41,7 +41,6 @@ gene-fetch \
     --type $TYPE \
     --out $OUTPUT_DIR \
     --in $SAMPLES_CSV \
-	--email $EMAIL \
-	--api-key $API_KEY 
-	#\
-	#-gb
+    --email $EMAIL \
+    --api-key $API_KEY \
+    -gb
