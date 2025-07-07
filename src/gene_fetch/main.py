@@ -16,7 +16,7 @@ from typing import Optional
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
-from .core import Config, setup_logging, make_out_dir, log_progress, get_process_id_column, logger
+from .core import Config, setup_logging, make_out_dir, log_progress, get_process_id_column, logger, clear_output_directory, should_clear_output_directory, save_run_info
 from .entrez_handler import EntrezHandler
 from .sequence_processor import SequenceProcessor
 from .output_manager import OutputManager
@@ -124,6 +124,13 @@ def setup_argument_parser():
         help="Download GenBank (.gb) files corresponding to fetched sequences",
     )
 
+    parser.add_argument(
+        "--clean",
+        "-c",
+        action="store_true",
+        help="Force clean start - clear output directory regardless of previous run parameters"
+    )
+    
     return parser
 
 def main():
@@ -146,20 +153,36 @@ def main():
     gene_name = args.gene.lower()
     output_dir = Path(args.out)
     sequence_type = args.type.lower()
-    save_genbank = args.genbank  # Get genbank flag
+    save_genbank = args.genbank
 
-    # Setup output directory and logging
+    # Determine input file path
+    input_file = args.input_csv or args.input_taxonomy_csv
+    if args.single:
+        input_file = "single_mode"
+
+    # Setup output directory and check if we should clear it
     make_out_dir(output_dir)
+
+    # Check if we should clear output directory
+    if args.clean:
+        logger.info("--clean flag specified - clearing output directory")
+        clear_output_directory(output_dir)
+        make_out_dir(output_dir)
+    elif should_clear_output_directory(output_dir, input_file, gene_name, 
+                                     sequence_type, args.protein_size, 
+                                     args.nucleotide_size, save_genbank):
+        clear_output_directory(output_dir)
+        make_out_dir(output_dir)
+
     setup_logging(output_dir)
 
     # Log if GenBank download is enabled
     if save_genbank:
         logger.info(
-            "GenBank download mode enabled - will save .gb files in genbank/ subdirectory"
+            "GenBank download mode enabled - .gb files saved to genbank/ subdirectory"
         )
 
-    # Initialize components with required email/api_key
-    # No try/catch needed here since we already validated credentials
+    # Initialise components with required email/api_key
     config = Config(email=args.email, api_key=args.api_key)
 
     # Always update thresholds based on user input, regardless of mode
@@ -183,7 +206,7 @@ def main():
     logger.info(f"Output directory: {output_dir}")
     logger.info(f"Sequence type: {sequence_type}")
 
-    # Initialize remaining components
+    # Initialise remaining components
     entrez = EntrezHandler(config)
     processor = SequenceProcessor(config, entrez)
 
@@ -207,18 +230,22 @@ def main():
             processor=processor,
             output_dir=output_dir,
             max_sequences=args.max_sequences,
-            save_genbank=save_genbank,  # Pass genbank flag
+            save_genbank=save_genbank,
         )
         logger.info("Single taxid processing completed")
+        
+        # Save run info for single mode
+        save_run_info(output_dir, input_file, gene_name, sequence_type, 
+                     args.protein_size, args.nucleotide_size, save_genbank)
         sys.exit(0)
     elif args.max_sequences is not None:
         logger.warning(
             "--max-sequences parameter is ignored when not in single taxid mode"
         )
 
-    # Create output manager
+    # Create output manager (enable sequence_references.csv for batch mode)
     output_manager = OutputManager(output_dir, save_genbank, create_sequence_refs=True)
-    
+
     # Process input samples.csv
     if args.input_csv:
         logger.info(
@@ -230,8 +257,12 @@ def main():
             sequence_type,
             processor,
             output_manager,
-            save_genbank,  # Pass genbank flag
+            save_genbank,
         )
+        
+        # Save run info after successful completion
+        save_run_info(output_dir, input_file, gene_name, sequence_type, 
+                     args.protein_size, args.nucleotide_size, save_genbank)
 
     # Process input samples_taxonomy.csv
     elif args.input_taxonomy_csv:
@@ -247,7 +278,11 @@ def main():
             entrez,
             save_genbank,
         )
+        
+        # Save run info after successful completion
+        save_run_info(output_dir, input_file, gene_name, sequence_type, 
+                     args.protein_size, args.nucleotide_size, save_genbank)
 
     logger.info("***********************************************************")
-    logger.info("              ? ? ? Gene fetch complete ? ? ?              ")
+    logger.info("              ! ! ! Gene-fetch complete ! ! !              ")
     logger.info("***********************************************************")

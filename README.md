@@ -6,7 +6,7 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/gene-fetch/README.html)
 [![Python versions](https://img.shields.io/pypi/pyversions/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
 [![status](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538/status.svg)](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538)
-
+[![Github Action test](https://github.com/bge-barcoding/gene_fetch/workflows/Test%20gene-fetch/badge.svg)](https://github.com/bge-barcoding/gene_fetch/actions)
 
 # GeneFetch 
 Gene Fetch enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
@@ -23,7 +23,7 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI database
 - Taxonomic validation: validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxon name is used for different taxa across the tree of life).
 - Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second). Caches taxonomy lookups for reduced API calls.
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
-- 'Checkpointing': if a run fails/crashes, the script can be rerun using the same arguments and it will resume from where it stopped.
+- 'Checkpointing': if a run fails/crashes, gene-fetch can be rerun using the same arguments and parameters, and it will resume from where it stopped (unless `--clean` is specified).
 - When more than 50 matching GenBank records are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders the records by sequence length, and processes the longest sequences first.
 - Can output corresponding genbank (.gb) files for each fetched nucleotide and/or protein sequences
 
@@ -114,6 +114,7 @@ gene-fetch --gene <gene_name> --type <sequence_type> --in <samples.csv> --out <o
 * `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` are ignored when run with `-s` mode). 'single' mode will fetch all (or N if specifying `--max-sequences`) target gene or protein sequences on GenBank for a specific taxonomic ID.
 * `-ms/--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
 * `-b/--genbank`: Saves genbank (.gb) files for fetched nucleotide and/or protein sequences to `genbank/` (applies when run in 'batch' or 'single' mode).
+* `-c/--clear`: Forces clean (re)start by clearing output directory regardless of previous run parameters. If ommiting `--clear` and rerunning gene-fetch with the same arguments and parameters, checkpoing will be enabled.
 
 
 ## Examples
@@ -219,7 +220,7 @@ sbatch gene_fetch.sh
 ```
 
 ## Supported targets
-GeneFetch will function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the listed targets. More targets can be added into the script if necessary (see 'class config').
+GeneFetch will function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the listed targets. More targets can be added if necessary (see 'class config').
 - cox1/COI/cytochrome c oxidase subunit I
 - cox2/COII/cytochrome c oxidase subunit II
 - cox3/COIII/cytochrome c oxidase subunit III

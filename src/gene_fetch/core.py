@@ -7,6 +7,10 @@ Contains Config class and basic utility functions.
 import logging
 import sys
 import re
+import json
+import hashlib
+import time
+import shutil
 from pathlib import Path
 from typing import Optional, Set, Dict, List, Any, FrozenSet
 
@@ -96,7 +100,102 @@ def get_process_id_column(header):
     logger.error(f"No matching column found in {header}")
     return None
 
+def get_run_signature(input_file: str, gene_name: str, sequence_type: str, 
+                     protein_size: int, nucleotide_size: int, save_genbank: bool) -> str:
+    """Generate a signature for the current run parameters."""
+    # Include file modification time to detect if input file changed
+    if input_file != "single_mode":
+        input_path = Path(input_file)
+        file_mtime = input_path.stat().st_mtime if input_path.exists() else 0
+    else:
+        file_mtime = 0
+    
+    run_params = {
+        "input_file": input_file,
+        "input_file_mtime": file_mtime,
+        "gene_name": gene_name,
+        "sequence_type": sequence_type,
+        "protein_size": protein_size,
+        "nucleotide_size": nucleotide_size,
+        "save_genbank": save_genbank
+    }
+    
+    # Create hash of parameters
+    params_str = json.dumps(run_params, sort_keys=True)
+    return hashlib.md5(params_str.encode()).hexdigest()
 
+def should_clear_output_directory(output_dir: Path, input_file: str, gene_name: str, 
+                                sequence_type: str, protein_size: int, nucleotide_size: int, 
+                                save_genbank: bool) -> bool:
+    """Check if output directory should be cleared based on run parameters."""
+    run_info_file = output_dir / ".gene_fetch_run_info"
+    current_signature = get_run_signature(input_file, gene_name, sequence_type, 
+                                        protein_size, nucleotide_size, save_genbank)
+    
+    if not run_info_file.exists():
+        # No previous run info = new run
+        logger.info("No previous run detected - starting fresh")
+        return True
+    
+    try:
+        with open(run_info_file, 'r') as f:
+            previous_info = json.load(f)
+            previous_signature = previous_info.get('signature', '')
+            
+        if current_signature != previous_signature:
+            logger.info("Run parameters changed from previous run - clearing output directory")
+            return True
+        else:
+            logger.info("Run parameters unchanged - resuming from existing output")
+            return False
+            
+    except Exception as e:
+        logger.warning(f"Error reading previous run info: {e} - treating as new run")
+        return True
+
+def save_run_info(output_dir: Path, input_file: str, gene_name: str, 
+                 sequence_type: str, protein_size: int, nucleotide_size: int, 
+                 save_genbank: bool) -> None:
+    """Save current run information for future comparison."""
+    run_info_file = output_dir / ".gene_fetch_run_info"
+    signature = get_run_signature(input_file, gene_name, sequence_type, 
+                                protein_size, nucleotide_size, save_genbank)
+    
+    run_info = {
+        "signature": signature,
+        "input_file": input_file,
+        "gene_name": gene_name,
+        "sequence_type": sequence_type,
+        "protein_size": protein_size,
+        "nucleotide_size": nucleotide_size,
+        "save_genbank": save_genbank,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    try:
+        with open(run_info_file, 'w') as f:
+            json.dump(run_info, f, indent=2)
+        logger.debug(f"Saved run info to {run_info_file}")
+    except Exception as e:
+        logger.warning(f"Could not save run info: {e}")
+
+def clear_output_directory(output_dir: Path) -> None:
+    """Clear existing output directory contents."""
+    if output_dir.exists():
+        logger.info(f"Clearing existing output directory: {output_dir}")
+        
+        # Remove all contents but keep the directory
+        for item in output_dir.iterdir():
+            if item.is_dir():
+                shutil.rmtree(item)
+            else:
+                item.unlink()
+        
+        logger.info("Output directory cleared")
+    else:
+        logger.info(f"Creating new output directory: {output_dir}")
+        
+        
 # =============================================================================
 # Configuration
 # =============================================================================

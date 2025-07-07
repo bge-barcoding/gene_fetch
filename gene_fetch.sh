@@ -9,26 +9,27 @@
 
 
 # Activate conda env
-#source path/to/profile.d/conda.sh
-#conda activate gene-fetch
+source path/to/profile.d/conda.sh
+conda activate gene-fetch
 
 
 
 # NCBI API parameters
-EMAIL=d.parsons@nhm.ac.uk
+EMAIL=example@example.ac.uk
 
-API_KEY="1866f9734a06f26bc5895a84387542ac9308"
+API_KEY="XYZ"
 
 
 # Gene search variables
-GENE=cox1
-TYPE=both
+GENE=cbx1
+TYPE=nucleotide
 #MIN_PROT_SIZE=500    # Default
 #MIN_NUC_Size=1000    # Default
 
 
 # Input and output directory paths
-SAMPLES_CSV=./data/samples.csv
+SAMPLES_CSV="test2.csv"
+#./data/samples.csv
 #TAXONOMY_CSV=./data/samples_taxonomy.csv
 
 OUTPUT_DIR=./test_samples
@@ -42,10 +43,5 @@ gene-fetch \
     --out $OUTPUT_DIR \
     --email $EMAIL \
     --api-key $API_KEY \
-	--single 3702 \
-	-ms 5 \
-	-gb
-	
-	#     --in $SAMPLES_CSV \
-	#\
-    #-gb
+    --in $SAMPLES_CSV
+

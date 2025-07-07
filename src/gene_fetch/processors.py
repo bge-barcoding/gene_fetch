@@ -41,12 +41,11 @@ def process_sample(
         nucleotide_path = output_manager.nucleotide_dir / f"{process_id}.fasta"
 
         # Define GenBank paths if needed
-        # Define GenBank paths if needed
         if save_genbank:
             protein_gb_path = output_manager.protein_genbank_dir / f"{process_id}.gb"
             nucleotide_gb_path = output_manager.nucleotide_genbank_dir / f"{process_id}.gb"
 
-        # Check if files already exist
+        # Check if files already exist (simple resume logic)
         if (sequence_type in ["protein", "both"] and protein_path.exists()) or (
             sequence_type in ["nucleotide", "both"] and nucleotide_path.exists()
         ):

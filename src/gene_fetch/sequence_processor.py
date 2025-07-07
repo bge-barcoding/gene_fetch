@@ -390,7 +390,7 @@ class SequenceProcessor:
             ]
         else:
             logger.warning(f"No defined variations for gene {gene_name}")
-            # For any other gene (including tetraspanin), add reasonable variations
+            # For any other gene add reasonable variations
             gene_variations = {base_gene}
             pattern_variations = [
                 base_gene,
