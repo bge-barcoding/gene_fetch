@@ -16,6 +16,9 @@ from typing import Optional
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
+# Import version from package __init__.py
+from . import __version__
+
 from .core import Config, setup_logging, make_out_dir, log_progress, get_process_id_column, logger, clear_output_directory, should_clear_output_directory, save_run_info
 from .entrez_handler import EntrezHandler
 from .sequence_processor import SequenceProcessor
@@ -26,6 +29,14 @@ from .processors import process_sample, process_single_taxid, process_taxid_csv,
 def setup_argument_parser():
     parser = argparse.ArgumentParser(
         description="Fetch gene and/or protein sequences from the NCBI GenBank database."
+    )
+
+    # Add version argument - this handles --version automatically
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"gene-fetch {__version__}",
+        help="Show version information and exit"
     )
 
     parser.add_argument(
@@ -134,12 +145,17 @@ def setup_argument_parser():
     return parser
 
 def main():
-    print("======   Starting Gene Fetch   ======")
-    print("Written by Dan Parsons & Ben Price, Natural History Museum London")
-    print("")
+    # Check if --version flag is used before printing startup messages
+    if "--version" not in sys.argv:
+        print("======   Starting Gene Fetch   ======")
+        print(f"Version: {__version__}")
+        print("Written by Dan Parsons & Ben Price, Natural History Museum London")
+        print("")
+    
     parser = setup_argument_parser()
     args = parser.parse_args()
     
+    # Rest of your existing main() function code remains unchanged...
     # Validate NCBI credentials first
     print(f"Validating NCBI credentials: email='{args.email}', api_key='{args.api_key}'")
     try:
@@ -281,7 +297,7 @@ def main():
         
         # Save run info after successful completion
         save_run_info(output_dir, input_file, gene_name, sequence_type, 
-                     args.protein_size, args.nucleotide_size, save_genbank)
+                     args.protein_size, args.nucleotile_size, save_genbank)
 
     logger.info("***********************************************************")
     logger.info("              ! ! ! Gene-fetch complete ! ! !              ")
