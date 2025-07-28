@@ -136,11 +136,11 @@ gene-fetch -e your.email@domain.com -k your_api_key \
             --type nucleotide --nucleotide-size 1000
 ```
 
-Retrieve 1000 available rbcL protein sequences >400aa for _Arabidopsis thaliana_ (taxid: 3702).
+Retrieve 100 available rbcL protein sequences >400aa for _Arabidopsis thaliana_ (taxid: 3702).
 ```
 gene-fetch -e your.email@domain.com -k your_api_key \
             -g rbcL -o ./output_dir -s 3702 \
-            --type protein --protein-size 400 --max-sequences 1000
+            --type protein --protein-size 400 --max-sequences 100
 ```
 
 
