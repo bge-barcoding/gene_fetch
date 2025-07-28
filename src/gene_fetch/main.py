@@ -155,8 +155,7 @@ def main():
     parser = setup_argument_parser()
     args = parser.parse_args()
     
-    # Rest of your existing main() function code remains unchanged...
-    # Validate NCBI credentials first
+    # Validate NCBI credentials at start of run
     print(f"Validating NCBI credentials: email='{args.email}', api_key='{args.api_key}'")
     try:
         Config.validate_credentials(args.email, args.api_key)
@@ -297,7 +296,7 @@ def main():
         
         # Save run info after successful completion
         save_run_info(output_dir, input_file, gene_name, sequence_type, 
-                     args.protein_size, args.nucleotile_size, save_genbank)
+                     args.protein_size, args.nucleotide_size, save_genbank)
 
     logger.info("***********************************************************")
     logger.info("              ! ! ! Gene-fetch complete ! ! !              ")
