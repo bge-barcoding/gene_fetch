@@ -9,7 +9,7 @@
 [![Github Action test](https://github.com/bge-barcoding/gene_fetch/workflows/Test%20gene-fetch/badge.svg)](https://github.com/bge-barcoding/gene_fetch/actions)
 
 # GeneFetch 
-Gene Fetch enables high-throughput retreival of sequence data from NCBI databases based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
+Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBank sequence database based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
 
 
 ## Highlight features
@@ -76,8 +76,9 @@ cd gene_fetch
 
 # Activate conda environment (once created), and install gene-fetch (+ dependencies) via your preferred method.
 
-# Run standalone Gene Fetch
+# Run standalone Gene Fetch:
 python /path/to/gene_fetch.py [options]
+
 ```
   
 ## Recommended: Testing
@@ -90,10 +91,14 @@ cd gene_fetch
 # Install pytest
 pip install pytest
 
+# Locally install Gene Fetch in editable mode from source (when inside `gene_fetch`) 
+pip install -e .
+
 # Run tests
 pytest
 ```
 * This will take a few minutes to run the tests. You will get 1 warning regarding API credentials as these are not provided in the basic tests.
+* Running `pip install -e .` enables source code in development to be utilised and tested.
 
 ## Usage
 ```bash
@@ -128,7 +133,7 @@ gene-fetch -e your.email@domain.com -k your_api_key \
 Fetch COI nucleotide sequences using sample taxonomic information, applying a minimum nucleotide sequence length of 1000bp
 ```
 gene-fetch -e your.email@domain.com -k your_api_key \
-            -g cox1 -o ./output_dir -i2 .data/samples_taxonomy.csv \
+            -g cox1 -o ./output_dir -i2 ./data/samples_taxonomy.csv \
             --type nucleotide --nucleotide-size 1000
 ```
 
