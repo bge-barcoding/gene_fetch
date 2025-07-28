@@ -452,11 +452,8 @@ class Config:
                 '"ribulose-1,5-bisphosphate carboxylase/oxygenase small '
                 'chain"[Protein Name]',
                 '"RuBisCO small subunit"[Protein Name]',
-                '"Ribulose bisphosphate carboxylase/oxygenase ' 'activase"[Gene]',
                 '"rbcL gene"[Gene]',
                 '"RBCL gene"[Gene]',
-                "rbcL[Title]",
-                "RBCL[Title]",
             ],
             "matk": [
                 "matK[Gene]",

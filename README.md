@@ -91,14 +91,13 @@ cd gene_fetch
 # Install pytest
 pip install pytest
 
-# Locally install Gene Fetch in editable mode from source (when inside `gene_fetch`) 
+# [Optional] Locally install Gene Fetch in editable mode from source (when inside `gene_fetch`) - enables testing of source code in development
 pip install -e .
 
 # Run tests
 pytest
 ```
 * This will take a few minutes to run the tests. You will get 1 warning regarding API credentials as these are not provided in the basic tests.
-* Running `pip install -e .` enables source code in development to be utilised and tested.
 
 ## Usage
 ```bash
