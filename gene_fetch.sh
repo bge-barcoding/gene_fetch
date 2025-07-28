@@ -9,15 +9,14 @@
 
 
 # Activate conda env
-source path/to/profile.d/conda.sh
-conda activate gene-fetch
+#source path/to/profile.d/conda.sh
+#conda activate gene-fetch
 
 
 
 # NCBI API parameters
-EMAIL=example@example.ac.uk
-
-API_KEY="XYZ"
+EMAIL="d.parsons@nhm.ac.uk"
+API="1866f9734a06f26bc5895a84387542ac9308"
 
 
 # Gene search variables
@@ -37,11 +36,15 @@ OUTPUT_DIR=./test_samples
 
 
 # Run gene_fetch.py
-gene-fetch \
-    --gene $GENE \
-    --type $TYPE \
-    --out $OUTPUT_DIR \
-    --email $EMAIL \
-    --api-key $API_KEY \
-    --in $SAMPLES_CSV
+#gene-fetch \
+#    --gene $GENE \
+#    --type $TYPE \
+#    --out $OUTPUT_DIR \
+#    --email $EMAIL \
+#    --api-key $API \
+#    --in $SAMPLES_CSV
+	
+gene-fetch -e $EMAIL -k $API \
+    -g rbcL -o ./output/out3 -s 3702 \
+    --type protein --protein-size 400 --max-sequences 1000
 
