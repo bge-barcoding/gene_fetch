@@ -13,11 +13,12 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBan
 
 
 ## Highlight features
-- Fetch protein and/or nucleotide sequences from NCBI GenBank database.
+- Fetch protein and/or nucleotide sequences from NCBI's GenBank database without constructing NCBI search terms.
 - Handles both direct nucleotide sequences and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
 - Support for both protein-coding and rDNA genes.
+- Seqeunce matches are made by searching for the target gene and/ protein in the GenBank annotation (feature table). 
 - Customisable length filtering thresholds for protein and nucleotide sequences (default: protein=500aa. nucleotide=1000bp).
-- Default "batch" mode processes multiple input taxa based on a user specified CSV file.
+- Default "batch" mode processes multiple input taxa based on a user-specified CSV file.
 - Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds can be bypassed by setting the value to zero or a negative number).
 - Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. i.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
 - Taxonomic validation: validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxon name is used for different taxa across the tree of life).
@@ -74,7 +75,7 @@ gene-fetch --help
 git clone https://github.com/bge-barcoding/gene_fetch.git
 cd gene_fetch
 
-# Activate conda environment (once created), and install gene-fetch (+ dependencies) via your preferred method.
+# Activate conda environment (once created), and install gene-fetch (+ dependencies) via your preferred method. See `environment.yaml` for list of dependencies.
 
 # Run standalone Gene Fetch:
 python /path/to/gene_fetch.py [options]
@@ -224,7 +225,7 @@ sbatch gene_fetch.sh
 ```
 
 ## Supported targets
-GeneFetch will function with other targets than those listed below, but it has hard-coded name variations and 'smarter' searching for the listed targets. More targets can be added if necessary (see 'class config').
+GeneFetch includes the following 'hard-coded' search terms with common name variations for 'smarter' searching of the targets listed below. 
 - cox1/COI/cytochrome c oxidase subunit I
 - cox2/COII/cytochrome c oxidase subunit II
 - cox3/COIII/cytochrome c oxidase subunit III
@@ -232,16 +233,19 @@ GeneFetch will function with other targets than those listed below, but it has h
 - nd1/NAD1/NADH dehydrogenase subunit 1
 - nd2/NAD2/NADH dehydrogenase subunit 2
 - rbcL/RuBisCO/ribulose-1,5-bisphosphate carboxylase/oxygenase large subunit
-- matK/maturase K/maturase type II intron splicing factor
+- matK/maturase K
+- psbA/photosystem II protein D1
 - 16S ribosomal RNA/16s
 - SSU/18s
 - LSU/28s
+- 23s
 - 12S ribosomal RNA/12s
 - ITS (ITS1-5.8S-ITS2)
 - ITS1/internal transcribed spacer 1
 - ITS2/internal transcribed spacer 2
 - tRNA-Leucine/trnL
-
+Gene/protein targets not listed can also be searched, however, Gene Fetch will implement a more generic search term/strategy with `{target}[Title] OR {target}[Gene] OR {target}[Protein Name]`.
+Additional targets can be added if required - see `self._rRNA_genes` and '`self._protein_coding_genes` dictionaries within 'class config' (in `src/gene_fetch/core.py`) for example search terms to construct your own. You are welcome to open an [Issue](https://github.com/bge-barcoding/gene_fetch/issues/new) or create a pull request with your search term for inclusion into the main Gene Fetch release (see [Contributions and guidelines](https://github.com/bge-barcoding/gene_fetch?tab=readme-ov-file#contributions-and-guidelines) section below.
 
 ## Benchmarking
 | Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time (hh:mm:ss) |
@@ -253,18 +257,21 @@ GeneFetch will function with other targets than those listed below, but it has h
 | All available (30) _A. thaliana_ sequences | Single | rbcL | N/A | Protein (>300aa) | 4G | 1 | 00:00:25 |
 | 1000 Culicidae sequences | Single | COI | N/A | nucleotide (>500bp) | 4G | 1 | 0031:05 |
 | 1000 _M. tubercolisis_ sequences | Single | 16S | N/A | nucleotide | 4G | 1 | 01:23:54 |
+* All benchmarking runs were performed on a SLURM-managed HPC cluster running Debian 12 ("Bookworm), with each job allocated a modest 1 CPU and 4 GB RAM.
 
 ## Future Development
-- Add optional alignment of retrieved sequences
-- Further improve efficiency of record searching and selecting the longest sequence
-- Add support for additional genetic markers beyond the currently supported set
-- Add BOLD query falback if no 'quality' sequence is found in GenBank
+- Add optional alignment of retrieved sequences [Ben].
+- Further improve efficiency of record searching and selecting the longest sequence [Dan].
+- Add support for additional genetic markers beyond the currently supported set [Dan].
+- Add BOLD query falback if no 'quality' sequence is found in GenBank [Ben].
+- Add optional HMM profile alignment that will attempt to extract the barcode region from certain support target genes (e.g. 658bp COI-5P barcode) [Ben].
+
 
 
 ## Contributions and guidelines
 First off, thanks for taking the time to contribute! ❤️
 
-- If you hav any questions, we assume that you have read the available [Documentation](https://github.com/bge-barcoding/gene_fetch/blob/main/README.md). It may also be worth searching for existing [Issues](https://github.com/bge-barcoding/gene_fetch/issues) that might awnser your question(s). In case you have found a suitable issue and still need clarification, you can write your question in this issue.
+- If you hav any questions, we assume that you have read the available [Documentation](https://github.com/bge-barcoding/gene_fetch/blob/main/README.md). It may also be worth searching for existing [Issues](https://github.com/bge-barcoding/gene_fetch/issues) that might awnser your question(s).
 - If you feel you still need clarification or want to report a possible bug/unexpected behaviour, we recommend opening an [Issue](https://github.com/bge-barcoding/gene_fetch/issues/) and provide as much context as you can about what behaviour you were expecting and the behaviour you're running into.
 - If you want to suggest a novel feature or minor improvements to existing functionality, please make your case for the feature/enchanment by opening an [Issue](https://github.com/bge-barcoding/gene_fetch/issues/new) or create a pull request with your contribution (at which point it will be evaluated as a possible addition). We aim to address any issues as soon as possible.
 

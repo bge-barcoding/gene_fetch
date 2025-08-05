@@ -43,7 +43,7 @@ def setup_argument_parser():
         "--gene",
         "-g",
         required=True,
-        help="Name of gene to search for in NCBI RefSeq database (e.g., cox1)",
+        help="Name of gene to search for in NCBI RefSeq database (e.g., cox1, coi, co1)",
     )
 
     parser.add_argument(
@@ -165,7 +165,7 @@ def main():
         print("Exiting script")
         sys.exit(1)
 
-    gene_name = args.gene.lower()
+    original_gene_name = args.gene.lower()
     output_dir = Path(args.out)
     sequence_type = args.type.lower()
     save_genbank = args.genbank
@@ -178,12 +178,12 @@ def main():
     # Setup output directory and check if we should clear it
     make_out_dir(output_dir)
 
-    # Check if we should clear output directory
+    # Check if we should clear output directory using original gene name for consistency
     if args.clean:
         logger.info("--clean flag specified - clearing output directory")
         clear_output_directory(output_dir)
         make_out_dir(output_dir)
-    elif should_clear_output_directory(output_dir, input_file, gene_name, 
+    elif should_clear_output_directory(output_dir, input_file, original_gene_name, 
                                      sequence_type, args.protein_size, 
                                      args.nucleotide_size, save_genbank):
         clear_output_directory(output_dir)
@@ -209,7 +209,12 @@ def main():
             f"Single-taxid mode activated: using protein size threshold {args.protein_size} and nucleotide size threshold {args.nucleotide_size}"
         )
 
-    search_type = config.set_gene_search_term(gene_name)
+    # Get canonical gene name and set search term
+    canonical_gene_name, search_type = config.set_gene_search_term(original_gene_name)
+    
+    # Log alias mapping if it occurred
+    if canonical_gene_name != original_gene_name:
+        logger.info(f"Using canonical gene name '{canonical_gene_name}' for processing")
 
     if sequence_type not in config.valid_sequence_types:
         print(
@@ -217,7 +222,7 @@ def main():
         )
         sys.exit(1)
 
-    logger.info(f"Using {search_type} search terms for {gene_name}")
+    logger.info(f"Using {search_type} search terms for {canonical_gene_name}")
     logger.info(f"Output directory: {output_dir}")
     logger.info(f"Sequence type: {sequence_type}")
 
@@ -240,7 +245,7 @@ def main():
 
         process_single_taxid(
             taxid=args.single,
-            gene_name=gene_name,
+            gene_name=canonical_gene_name,  # Use canonical name
             sequence_type=sequence_type,
             processor=processor,
             output_dir=output_dir,
@@ -249,8 +254,8 @@ def main():
         )
         logger.info("Single taxid processing completed")
         
-        # Save run info for single mode
-        save_run_info(output_dir, input_file, gene_name, sequence_type, 
+        # Save run info for single mode using original gene name for consistency checking
+        save_run_info(output_dir, input_file, original_gene_name, sequence_type, 
                      args.protein_size, args.nucleotide_size, save_genbank)
         sys.exit(0)
     elif args.max_sequences is not None:
@@ -264,29 +269,29 @@ def main():
     # Process input samples.csv
     if args.input_csv:
         logger.info(
-            f"Starting gene fetch for {gene_name} using taxids from {args.input_csv}"
+            f"Starting gene fetch for {canonical_gene_name} using taxids from {args.input_csv}"
         )
         process_taxid_csv(
             args.input_csv,
-            gene_name,
+            canonical_gene_name,  # Use canonical name
             sequence_type,
             processor,
             output_manager,
             save_genbank,
         )
         
-        # Save run info after successful completion
-        save_run_info(output_dir, input_file, gene_name, sequence_type, 
+        # Save run info after successful completion using original for consistency
+        save_run_info(output_dir, input_file, original_gene_name, sequence_type, 
                      args.protein_size, args.nucleotide_size, save_genbank)
 
     # Process input samples_taxonomy.csv
     elif args.input_taxonomy_csv:
         logger.info(
-            f"Starting gene fetch for {gene_name} using taxonomy from {args.input_taxonomy_csv}"
+            f"Starting gene fetch for {canonical_gene_name} using taxonomy from {args.input_taxonomy_csv}"
         )
         process_taxonomy_csv(
             args.input_taxonomy_csv,
-            gene_name,
+            canonical_gene_name,  # Use canonical name
             sequence_type,
             processor,
             output_manager,
@@ -294,8 +299,8 @@ def main():
             save_genbank,
         )
         
-        # Save run info after successful completion
-        save_run_info(output_dir, input_file, gene_name, sequence_type, 
+        # Save run info after successful completion using original for consistency
+        save_run_info(output_dir, input_file, original_gene_name, sequence_type, 
                      args.protein_size, args.nucleotide_size, save_genbank)
 
     logger.info("***********************************************************")

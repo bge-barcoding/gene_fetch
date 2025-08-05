@@ -90,7 +90,7 @@ def test_main_single_taxid_mode(mock_parser, mock_save_run_info, mock_clear_outp
     # Set up mock returns
     mock_config_instance = MagicMock()
     mock_config_instance.valid_sequence_types = {'protein', 'nucleotide', 'both'}
-    mock_config_instance.set_gene_search_term.return_value = "protein-coding"
+    mock_config_instance.set_gene_search_term.return_value = ("cox1", "protein-coding")  # Fixed: return tuple
     mock_config.return_value = mock_config_instance
     
     mock_entrez_instance = MagicMock()
@@ -126,7 +126,7 @@ def test_main_single_taxid_mode(mock_parser, mock_save_run_info, mock_clear_outp
     mock_process_single.assert_called_once()
     args, kwargs = mock_process_single.call_args
     assert kwargs['taxid'] == '9606'
-    assert kwargs['gene_name'] == 'cox1'
+    assert kwargs['gene_name'] == 'cox1'  # Should use canonical name
     assert kwargs['sequence_type'] == 'both'
     assert kwargs['processor'] == mock_processor_instance
     assert isinstance(kwargs['output_dir'], Path)
@@ -178,7 +178,7 @@ def test_main_taxid_csv_mode(mock_parser, mock_save_run_info, mock_clear_output_
     # Set up mock returns
     mock_config_instance = MagicMock()
     mock_config_instance.valid_sequence_types = {'protein', 'nucleotide', 'both'}
-    mock_config_instance.set_gene_search_term.return_value = "protein-coding"
+    mock_config_instance.set_gene_search_term.return_value = ("cox1", "protein-coding")  # Fixed: return tuple
     mock_config.return_value = mock_config_instance
     
     mock_entrez_instance = MagicMock()
@@ -213,7 +213,7 @@ def test_main_taxid_csv_mode(mock_parser, mock_save_run_info, mock_clear_output_
     mock_process_taxid_csv.assert_called_once()
     args, kwargs = mock_process_taxid_csv.call_args
     assert args[0] == 'samples.csv'
-    assert args[1] == 'cox1'
+    assert args[1] == 'cox1'  # Should use canonical name
     assert args[2] == 'both'
     assert args[3] == mock_processor_instance
     assert args[4] == mock_output_manager_instance
@@ -261,7 +261,7 @@ def test_main_taxonomy_csv_mode(mock_parser, mock_save_run_info, mock_clear_outp
     # Set up mock returns
     mock_config_instance = MagicMock()
     mock_config_instance.valid_sequence_types = {'protein', 'nucleotide', 'both'}
-    mock_config_instance.set_gene_search_term.return_value = "protein-coding"
+    mock_config_instance.set_gene_search_term.return_value = ("cox1", "protein-coding")  # Fixed: return tuple
     mock_config.return_value = mock_config_instance
     
     mock_entrez_instance = MagicMock()
@@ -290,7 +290,7 @@ def test_main_taxonomy_csv_mode(mock_parser, mock_save_run_info, mock_clear_outp
     mock_process_taxonomy_csv.assert_called_once()
     args, kwargs = mock_process_taxonomy_csv.call_args
     assert args[0] == 'taxonomy.csv'
-    assert args[1] == 'cox1'
+    assert args[1] == 'cox1'  # Should use canonical name
     assert args[2] == 'both'
     assert args[3] == mock_processor_instance
     assert args[4] == mock_output_manager_instance
@@ -336,7 +336,7 @@ def test_main_with_advanced_options(mock_parser, mock_save_run_info, mock_clear_
     # Set up mock returns
     mock_config_instance = MagicMock()
     mock_config_instance.valid_sequence_types = {'protein', 'nucleotide', 'both'}
-    mock_config_instance.set_gene_search_term.return_value = "protein-coding"
+    mock_config_instance.set_gene_search_term.return_value = ("cox1", "protein-coding")  # Fixed: return tuple
     mock_config.return_value = mock_config_instance
     
     mock_entrez_instance = MagicMock()
@@ -354,7 +354,7 @@ def test_main_with_advanced_options(mock_parser, mock_save_run_info, mock_clear_
     mock_process_single.assert_called_once()
     args, kwargs = mock_process_single.call_args
     assert kwargs['taxid'] == '9606'
-    assert kwargs['gene_name'] == 'cox1'
+    assert kwargs['gene_name'] == 'cox1'  # Should use canonical name
     assert kwargs['sequence_type'] == 'both'
     assert kwargs['processor'] == mock_processor_instance
     assert isinstance(kwargs['output_dir'], Path)
@@ -405,6 +405,7 @@ def test_main_invalid_sequence_type(mock_parser, mock_save_run_info, mock_clear_
     with patch('gene_fetch.main.Config') as mock_config:
         mock_config_instance = MagicMock()
         mock_config_instance.valid_sequence_types = {'protein', 'nucleotide', 'both'}
+        mock_config_instance.set_gene_search_term.return_value = ("cox1", "protein-coding")  # Fixed: return tuple
         mock_config.return_value = mock_config_instance
         
         # Run main function
@@ -454,7 +455,7 @@ def test_main_no_input_files(mock_parser, mock_save_run_info, mock_clear_output_
     # Set up mock returns
     mock_config_instance = MagicMock()
     mock_config_instance.valid_sequence_types = {'protein', 'nucleotide', 'both'}
-    mock_config_instance.set_gene_search_term.return_value = "protein-coding"
+    mock_config_instance.set_gene_search_term.return_value = ("cox1", "protein-coding")  # Fixed: return tuple
     mock_config.return_value = mock_config_instance
     
     mock_entrez_instance = MagicMock()
@@ -554,7 +555,7 @@ def test_main_with_real_args(mock_parser, mock_save_run_info, mock_clear_output_
         # Set up Config to return a mock instance
         mock_config_instance = MagicMock()
         mock_config_instance.valid_sequence_types = {'protein', 'nucleotide', 'both'}
-        mock_config_instance.set_gene_search_term.return_value = "protein-coding"
+        mock_config_instance.set_gene_search_term.return_value = ("cox1", "protein-coding")  # Fixed: return tuple
         mock_config.return_value = mock_config_instance
         
         # Run main function

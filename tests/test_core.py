@@ -181,11 +181,12 @@ def test_config_set_gene_search_term_rRNA():
     config = Config(email="test@example.com", api_key="valid_test_key_12345")
     
     # Set for 16S rRNA gene
-    search_type = config.set_gene_search_term("16s")
+    canonical_gene_name, search_type = config.set_gene_search_term("16s")
     
     # Check search term and type
     assert "16S ribosomal RNA[Gene]" in config.gene_search_term
     assert "16S rRNA[Gene]" in config.gene_search_term
+    assert canonical_gene_name == "16s"
     assert search_type == "rRNA"
 
 
@@ -194,11 +195,12 @@ def test_config_set_gene_search_term_protein_coding():
     config = Config(email="test@example.com", api_key="valid_test_key_12345")
     
     # Set for rbcL gene
-    search_type = config.set_gene_search_term("rbcl")
+    canonical_gene_name, search_type = config.set_gene_search_term("rbcl")
     
     # Check search term and type
     assert "rbcL[Gene]" in config.gene_search_term
     assert "RBCL[Gene]" in config.gene_search_term
+    assert canonical_gene_name == "rbcl"
     assert search_type == "protein-coding"
 
 
@@ -207,13 +209,45 @@ def test_config_set_gene_search_term_generic():
     config = Config(email="test@example.com", api_key="valid_test_key_12345")
     
     # Set for a generic gene
-    search_type = config.set_gene_search_term("unknown_gene")
+    canonical_gene_name, search_type = config.set_gene_search_term("unknown_gene")
     
     # Check search term and type
     assert "unknown_gene[Title]" in config.gene_search_term
     assert "unknown_gene[Gene]" in config.gene_search_term
-    assert '"unknown_gene"[Text Word]' in config.gene_search_term
+    assert '"unknown_gene"[Protein Name]' in config.gene_search_term  # Fixed: was [Text Word]
+    assert canonical_gene_name == "unknown_gene"
     assert search_type == "generic"
+
+
+def test_config_set_gene_search_term_alias_mapping():
+    """Test that aliases are correctly mapped to canonical names."""
+    config = Config(email="test@example.com", api_key="valid_test_key_12345")
+
+    # Test COI -> cox1 mapping
+    canonical_gene_name, search_type = config.set_gene_search_term("coi")
+    assert canonical_gene_name == "cox1"
+    assert search_type == "protein-coding"
+    assert "cox1[Gene]" in config.gene_search_term
+
+    # Test uppercase COI -> cox1 mapping
+    canonical_gene_name, search_type = config.set_gene_search_term("COI")
+    assert canonical_gene_name == "cox1"
+    assert search_type == "protein-coding"
+
+    # Test rbcL -> rbcl mapping
+    canonical_gene_name, search_type = config.set_gene_search_term("rbcL")
+    assert canonical_gene_name == "rbcl" 
+    assert search_type == "protein-coding"
+
+    # Test MATK -> matk mapping
+    canonical_gene_name, search_type = config.set_gene_search_term("MATK")
+    assert canonical_gene_name == "matk"
+    assert search_type == "protein-coding"
+
+    # Test that canonical names still work
+    canonical_gene_name, search_type = config.set_gene_search_term("cox1")
+    assert canonical_gene_name == "cox1"
+    assert search_type == "protein-coding"
 
 
 def test_config_validate_credentials_valid_email_and_api_key():

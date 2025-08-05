@@ -262,40 +262,55 @@ class Config:
         self.min_protein_size_single_mode = 100
 
         self.gene_search_term = ""
+        
+        # Define target aliases for common gene name variations
+        self._target_aliases = {
+            "coi": "cox1",
+            "co1": "cox1",
+            "cox1": "cox1",
+            "coii": "cox2",
+            "co2": "cox2",
+            "cox2": "cox2",
+            "coiii": "cox3",
+            "co3": "cox3",
+            "cox3": "cox3",
+            "cytb": "cytb",
+            "cob": "cytb",
+            "nd1": "nd1",
+            "nad1": "nd1",
+            "nd2": "nd2",
+            "nad2": "nd2",
+            "rbcl": "rbcl",
+            "rbcL": "rbcl",
+            "matk": "matk",
+            "matK": "matk",
+            "psba": "psba",
+            "psbA": "psba",
+            "trnh-psba": "psba",
+            "psba-trnh": "psba",
+        }
     
         # Define gene type categories
-        self._rRNA_genes = {
+        self._rRNA_genes = {              
             "16s": [
                 "16S ribosomal RNA[Gene]",
                 "16S rRNA[Gene]",
                 "rrs[Gene]",
                 "rrn16[Gene]",
-                "16S ribosomal RNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "16S rRNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "16S[Title] NOT methylase[Title] NOT methyltransferase[Title] "
-                "NOT pseudouridylate[Title] NOT synthase[Title]",
-                "16S ribosomal RNA[All Fields]",
-                "rrs[All Fields]",
-                "rrn16[All Fields]",
+                "16s[Gene]",
+                "16s[rRNA]",
+                "16S ribosomal RNA[rRNA]",
+                "16S rRNA[rRNA]",
+                "rrs[rRNA]",
+                "rrn16[rRNA]",
             ],
             "18s": [
                 "18S ribosomal RNA[Gene]",
                 "18S rRNA[Gene]",
                 "rrn18[Gene]",
                 "SSU rRNA[Gene]",
-                "18S ribosomal RNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "18S rRNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "18S[Title] NOT methylase[Title] NOT methyltransferase[Title] "
-                "NOT pseudouridylate[Title] NOT synthase[Title]",
                 "18S ribosomal RNA[rRNA]",
+                "18S rRNA[rRNA]",
                 "SSU rRNA[rRNA]",
                 "rrn18[rRNA]",
             ],
@@ -304,15 +319,8 @@ class Config:
                 "23S rRNA[Gene]",
                 "rrl[Gene]",
                 "rrn23[Gene]",
-                "23S ribosomal RNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "23S rRNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "23S[Title] NOT methylase[Title] NOT methyltransferase[Title] "
-                "NOT pseudouridylate[Title] NOT synthase[Title]",
                 "23S ribosomal RNA[rRNA]",
+                "23S rRNA[rRNA]",
                 "rrl[rRNA]",
                 "rrn23[rRNA]",
             ],
@@ -321,15 +329,8 @@ class Config:
                 "28S rRNA[Gene]",
                 "rrn28[Gene]",
                 "LSU rRNA[Gene]",
-                "28S ribosomal RNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "28S rRNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "28S[Title] NOT methylase[Title] NOT methyltransferase[Title] "
-                "NOT pseudouridylate[Title] NOT synthase[Title]",
-                "28S ribosomal RNA[rRNA]",
+                "28S ribosomal RNA[rRNA]"
+                "28S rRNA[rRNA]",
                 "LSU rRNA[rRNA]",
                 "rrn28[rRNA]",
             ],
@@ -338,15 +339,8 @@ class Config:
                 "12S rRNA[Gene]",
                 "mt-rrn1[Gene]",
                 "mt 12S rRNA[Gene]",
-                "12S ribosomal RNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "12S rRNA[Title] NOT methylase[Title] NOT "
-                "methyltransferase[Title] NOT pseudouridylate[Title] NOT "
-                "synthase[Title]",
-                "12S[Title] NOT methylase[Title] NOT methyltransferase[Title] "
-                "NOT pseudouridylate[Title] NOT synthase[Title]",
                 "12S ribosomal RNA[rRNA]",
+                "12S rRNA[rRNA]",
                 "mt-rrn1[rRNA]",
                 "mt 12S rRNA[rRNA]",
             ],
@@ -375,17 +369,20 @@ class Config:
                 "rDNA ITS[Title]",
             ],
             "trnl": [
-                "trnL[Title]",
-                "trnL gene[Title]",
-                "tRNA-Leu[Title]",
-                "tRNA-Leucine[Title]",
-                "trnL-trnF[Title]",
-                "trnL-F[Title]",
-                "chloroplast trnL[Title]",
-                "cp trnL[Title]",
-                "trnL intron[Title]",
-                "trnL-UAA[Title]",
-                '"trnL gene"[Gene]',
+                "trnL[Gene]",
+                "trnL gene[Gene]",
+                "tRNA-Leu[Gene]",
+                "tRNA-Leucine[Gene]",
+                "trnL-trnF[Gene]",
+                "trnL-F[Gene]",
+                "chloroplast trnL[Gene]",
+                "trnL[rRNA]",
+                "trnL gene[rRNA]",
+                "tRNA-Leu[rRNA]",
+                "tRNA-Leucine[rRNA]",
+                "trnL-trnF[rRNA]",
+                "trnL-F[rRNA]",
+                "chloroplast trnL[rRNA]",
             ],
         }
 
@@ -439,6 +436,9 @@ class Config:
             "rbcl": [
                 "rbcL[Gene]",
                 "RBCL[Gene]",
+                "RuBisCO[Gene]",
+                '"rbcL gene"[Gene]',
+                '"RBCL gene"[Gene]',
                 '"ribulose-1,5-bisphosphate carboxylase/oxygenase large '
                 'subunit"[Protein Name]',
                 '"ribulose 1,5-bisphosphate carboxylase/oxygenase large '
@@ -452,44 +452,33 @@ class Config:
                 '"ribulose-1,5-bisphosphate carboxylase/oxygenase small '
                 'chain"[Protein Name]',
                 '"RuBisCO small subunit"[Protein Name]',
-                '"rbcL gene"[Gene]',
-                '"RBCL gene"[Gene]',
+
             ],
             "matk": [
                 "matK[Gene]",
                 "MATK[Gene]",
                 '"maturase K"[Protein Name]',
-                '"maturase K"[Gene]',
                 '"maturase-K"[Protein Name]',
                 '"maturase-K"[Gene]',
                 '"Maturase K"[Protein Name]',
                 '"Maturase K"[Gene]',
-                '"matK gene"[Gene]',
                 '"MATK gene"[Gene]',
-                '"trnK-matK"[Gene]',
                 '"maturase type II intron splicing factor"[Protein Name]',
-                '"chloroplast group II intron splicing factor maturase '
-                'K"[Protein Name]',
-                '"type II intron maturase K"[Protein Name]',
                 '"tRNA-lysine maturase K"[Protein Name]',
             ],
             "psba": [
                 "psbA[Gene]",
                 "PSBA[Gene]",
+                '"photosystem II reaction center protein D1"[Gene]',
+                '"PSII D1 protein"[Gene]',
+                '"psbA gene"[Gene]',
+                '"PSBA gene"[Gene]',
                 '"photosystem II protein D1"[Protein Name]',
                 '"photosystem II protein D1"[Gene]',
                 '"PSII D1 protein"[Protein Name]',
-                '"PSII D1 protein"[Gene]',
                 '"photosystem II reaction center protein D1"[Protein Name]',
-                '"photosystem II reaction center protein D1"[Gene]',
                 '"photosystem Q(B) protein"[Protein Name]',
                 '"32 kDa thylakoid membrane protein"[Protein Name]',
-                '"psbA gene"[Gene]',
-                '"PSBA gene"[Gene]',
-                "psbA[Title]",
-                "PSBA[Title]",
-                '"trnH-psbA"[Title]',
-                '"psbA-trnH"[Title]',
             ],
         }
 
@@ -505,9 +494,20 @@ class Config:
         self.min_nucleotide_size_single_mode = nucleotide_size
 
     # Set search term based on gene name and type
-    def set_gene_search_term(self, gene_name: str) -> str:
-        """Set the gene search term based on the gene name and type."""
+    def set_gene_search_term(self, gene_name: str) -> tuple[str, str]:
+        """Set the gene search term based on the gene name and type.
+        
+        Returns:
+            tuple: (canonical_gene_name, search_type)
+        """
+        original_gene_name = gene_name
         gene_name = gene_name.lower()
+        
+        # Check if gene name has an alias and map to canonical name
+        if gene_name in self._target_aliases:
+            canonical_name = self._target_aliases[gene_name]
+            logger.info(f"Mapping gene alias '{original_gene_name}' to canonical name '{canonical_name}'")
+            gene_name = canonical_name
 
         # Check if rRNA
         if gene_name in self._rRNA_genes:
@@ -525,8 +525,8 @@ class Config:
             # Generic search term for non-listed genes
             self.gene_search_term = (
                 f"({gene_name}[Title] OR {gene_name}[Gene] OR "
-                f'"{gene_name}"[Text Word])'
+                f'"{gene_name}\"[Protein Name])'
             )
             search_type = "generic"
 
-        return search_type  # Return the type for logging purposes
+        return gene_name, search_type  # Return both canonical name and type
