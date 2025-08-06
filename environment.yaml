@@ -4,5 +4,5 @@ channels:
   - bioconda
 dependencies:
   - biopython=1.85
-  - gene-fetch=1.0.14
+  - gene-fetch=1.0.15
   - ratelimit=2.2.1
