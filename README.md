@@ -7,6 +7,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
 [![status](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538/status.svg)](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538)
 [![Github Action test](https://github.com/bge-barcoding/gene_fetch/workflows/Test%20gene-fetch/badge.svg)](https://github.com/bge-barcoding/gene_fetch/actions)
+[![Zenodo archive DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16759414.svg)](https://doi.org/10.5281/zenodo.16759414)
 
 # GeneFetch 
 Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBank sequence database based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
@@ -21,7 +22,7 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBan
 - Default "batch" mode processes multiple input taxa based on a user-specified CSV file.
 - Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds can be bypassed by setting the value to zero or a negative number).
 - Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. i.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
-- Taxonomic validation: validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxon name is used for different taxa across the tree of life).
+- Taxonomic validation: validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxa name is used for different taxa across the tree of life).
 - Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second). Caches taxonomy lookups for reduced API calls.
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
 - 'Checkpointing': if a run fails/crashes, gene-fetch can be rerun using the same arguments and parameters, and it will resume from where it stopped (unless `--clean` is specified).

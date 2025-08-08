@@ -10,13 +10,13 @@ authors:
   - name: Daniel A.J. Parsons
     orcid: 0000-0002-5246-0725
     affiliation: 1 
-  - name: Benjamin W. Price
+  - name: Benjamin Price
     orcid: 0000-0001-5497-4087
     affiliation: 1
 affiliations:
  - name: Natural History Museum, Cromwell Road, London, SW7 5BD, United Kingdom
    index: 1
-   ror: 000017519k585
+   ror: 039zvsn29
 date: 07 May 2025
 bibliography: paper.bib
 ---
@@ -29,7 +29,7 @@ bibliography: paper.bib
 
 By streamlining the often tedious and error-prone task of sequence acquisition at scale, `Gene Fetch` addresses a critical need in biological research. It is capable of retrieving both protein and nucleotide sequences for a user-specified target from across the tree of life, including protein-coding genes (such as cytochrome oxidase subunits, NADH dehydrogenases, RuBisCO, and matK), ribosomal RNA genes (like 16S, 18S, and 28S) and the internal transcribed spacer (ITS) regions. The tool accepts both NCBI taxonomic identifiers (taxids) and hierarchical taxonomic information as input.
 
-It can systematically traverse taxonomic hierarchies when target sequences are unavailable at the initially specified taxonomic rank (e.g., species → genus → family, etc), documenting the matched taxonomic rank. This is especially valuable for researchers working with non-model organisms or taxonomic groups with limited sequence data, facilitating retrieval of the taxonomically closest available sequence. The integrated 'batch' mode processes multiple input taxa and retrieve the single ‘best’ sequence per taxa, whilst 'single' mode exhaustively searches for all target sequences for a specified taxon. Collectively, these modes enable efficient retrieval of sequence data for genomic and phylogenetic studies across diverse taxa.
+It can systematically traverse taxonomic hierarchies when target sequences are unavailable at the initially specified taxonomic rank (e.g., species → genus → family, etc), documenting the matched rank. This is especially valuable for researchers working with non-model organisms or taxonomic groups with limited sequence data, facilitating retrieval of the taxonomically closest available sequence. The integrated 'batch' mode processes multiple input taxa and retrieve the single ‘best’ sequence per taxa, whilst 'single' mode exhaustively searches for all target sequences for a specified taxon. Collectively, these modes enable efficient retrieval of sequence data for genomic and phylogenetic studies across diverse taxa.
 
 
 
@@ -59,7 +59,7 @@ The tool follows a modular design with four primary components: configuration ma
 
 # Availability
 
-`Gene Fetch` is distributed as a Python package on [PyPi](https://pypi.org/project/gene-fetch/) and a [bioconda package](https://bioconda.github.io/recipes/gene-fetch/README.html), with the source code, testing modules, and a standalone script available under an MIT license through the [GitHub](https://github.com/bge-barcoding/gene_fetch) repository. A supplementary shell wrapper script is also provided in the GitHub repository for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running the SLURM job scheduler. 
+`Gene Fetch` is distributed as a Python package on [PyPI](https://pypi.org/project/gene-fetch/) and a [bioconda package](https://bioconda.github.io/recipes/gene-fetch/README.html), with the source code, testing modules, and a standalone script available under an MIT license through the [GitHub](https://github.com/bge-barcoding/gene_fetch) repository. A supplementary shell wrapper script is also provided in the GitHub repository for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running the SLURM job scheduler. 
 
 
 
