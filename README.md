@@ -8,6 +8,10 @@
 [![status](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538/status.svg)](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538)
 [![Github Action test](https://github.com/bge-barcoding/gene_fetch/workflows/Test%20gene-fetch/badge.svg)](https://github.com/bge-barcoding/gene_fetch/actions)
 [![Zenodo archive DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16759414.svg)](https://doi.org/10.5281/zenodo.16759414)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3b8e2a1bea7d56e95dda6e8d9ef808a92bd0eb57
 
 # GeneFetch 
 Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBank sequence database based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
