@@ -54,7 +54,7 @@ The tool follows a modular design with four primary components: configuration ma
 
 # Availability
 
-`Gene Fetch` is distributed as a Python package on [PyPI](https://pypi.org/project/gene-fetch/) and a [bioconda package](https://bioconda.github.io/recipes/gene-fetch/README.html), with the source code, testing modules, and a standalone script available under an MIT license through the [GitHub](https://github.com/bge-barcoding/gene_fetch) repository. A supplementary shell wrapper script is also provided in the GitHub repository for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running the SLURM job scheduler. 
+`Gene Fetch` is distributed as a Python package on [PyPI](https://pypi.org/project/gene-fetch/) and a [Bioconda package](https://bioconda.github.io/recipes/gene-fetch/README.html), with the source code, testing modules, and a standalone script available under an MIT license through the [GitHub](https://github.com/bge-barcoding/gene_fetch) repository. A supplementary shell wrapper script is also provided in the GitHub repository for submitting a `Gene Fetch` job to a High-Performance Computing (HPC) cluster running the SLURM job scheduler. 
 
 
 
