@@ -279,4 +279,4 @@ First off, thanks for taking the time to contribute! ❤️
 ## Authorship & citation
 GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2025).
 
-If you use GeneFetch, please cite our publication: **[XYZ]()**
+If you use GeneFetch, please cite our publication: Parsons et al., (2025). Gene Fetch: A Python tool for sequence retrieval from GenBank across the tree of life. Journal of Open Source Software, 10(112), 8456, https://doi.org/10.21105/joss.08456
