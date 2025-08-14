@@ -3,9 +3,8 @@
 </p>
 
 [![PyPI version](https://img.shields.io/pypi/v/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
-[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/gene-fetch/README.html)
-[![status](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538/status.svg)](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538)
-[![DOI](https://joss.theoj.org/papers/10.21105/joss.08456/status.svg)](https://doi.org/10.21105/joss.08456)
+[![Install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/gene-fetch/README.html)
+[![JOSS DOI](https://joss.theoj.org/papers/10.21105/joss.08456/status.svg)](https://doi.org/10.21105/joss.08456)
 [![Github Action test](https://github.com/bge-barcoding/gene_fetch/workflows/Test%20gene-fetch/badge.svg)](https://github.com/bge-barcoding/gene_fetch/actions)
 [![Zenodo archive DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16759414.svg)](https://doi.org/10.5281/zenodo.16759414)
 
