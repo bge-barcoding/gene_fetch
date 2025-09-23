@@ -3,9 +3,8 @@
 </p>
 
 [![PyPI version](https://img.shields.io/pypi/v/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
-[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/gene-fetch/README.html)
-[![Python versions](https://img.shields.io/pypi/pyversions/gene-fetch.svg)](https://pypi.org/project/gene-fetch/)
-[![status](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538/status.svg)](https://joss.theoj.org/papers/2ce8ec99977083e2fa095223aa193538)
+[![Install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/gene-fetch/README.html)
+[![JOSS DOI](https://joss.theoj.org/papers/10.21105/joss.08456/status.svg)](https://doi.org/10.21105/joss.08456)
 [![Github Action test](https://github.com/bge-barcoding/gene_fetch/workflows/Test%20gene-fetch/badge.svg)](https://github.com/bge-barcoding/gene_fetch/actions)
 [![Zenodo archive DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16759414.svg)](https://doi.org/10.5281/zenodo.16759414)
 
@@ -282,4 +281,4 @@ First off, thanks for taking the time to contribute! ❤️
 ## Authorship & citation
 GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2025).
 
-If you use GeneFetch, please cite our publication: **[XYZ]()**
+If you use GeneFetch, please cite our publication: Parsons et al., (2025). Gene Fetch: A Python tool for sequence retrieval from GenBank across the tree of life. Journal of Open Source Software, 10(112), 8456, https://doi.org/10.21105/joss.08456
