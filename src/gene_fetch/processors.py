@@ -25,6 +25,44 @@ from .output_manager import OutputManager
 # =============================================================================
 # Processing functions
 # =============================================================================
+# Create FASTA header based on the specified format.
+def create_fasta_header(record, header_format, process_id, taxid=None, taxonomy=None):
+    if header_format == "basic":
+        return process_id
+    elif header_format == "detailed":
+        # Format: ID|taxid|accession_number|GenBank description|length
+        header_parts = []
+        
+        # ID
+        header_parts.append(process_id if process_id else "null")
+        
+        # taxid  
+        header_parts.append(str(taxid) if taxid else "null")
+        
+        # accession_number
+        header_parts.append(record.id if record.id else "null")
+        
+        # GenBank description (clean up the description)
+        if hasattr(record, 'description') and record.description:
+            description = record.description
+            # Remove the accession number from description if it's at the start
+            if record.id and description.startswith(record.id):
+                description = description[len(record.id):].lstrip()
+            # Remove any leading whitespace or punctuation
+            description = description.lstrip(" .,;:")
+            # Replace any pipe characters that would interfere with our delimiter
+            description = description.replace("|", ";")
+            header_parts.append(description if description else "null")
+        else:
+            header_parts.append("null")
+            
+        # length
+        header_parts.append(str(len(record.seq)) if record.seq else "null")
+        
+        return "|".join(header_parts)
+    else:
+        return process_id  # fallback to basic
+
 # Process input per sample, retrieving and storing fetched sequences
 def process_sample(
     process_id: str,
@@ -34,6 +72,7 @@ def process_sample(
     output_manager: OutputManager,
     gene_name: str,
     save_genbank: bool = False,
+    header_format: str = "basic",
 ) -> None:
     try:
         # Define output paths
@@ -83,8 +122,13 @@ def process_sample(
                 # Store original ID for GenBank download
                 original_id = protein_record.id
 
-                # Write FASTA
-                protein_record.id = process_id
+                # Create FASTA header based on format
+                fasta_header = create_fasta_header(
+                    protein_record, header_format, process_id, taxid, taxonomy
+                )
+
+                # Write FASTA with custom header
+                protein_record.id = fasta_header
                 protein_record.description = ""
                 SeqIO.write(protein_record, protein_path, "fasta")
                 logger.info(f"Written protein sequence to '{protein_path}'")
@@ -101,7 +145,7 @@ def process_sample(
                 if protein_path.exists():
                     protein_path.unlink()
 
-        # Process nucleotide sequence
+        # Process nucleotide sequence  
         if nucleotide_record and sequence_type in ["nucleotide", "both"]:
             try:
                 result_data["nucleotide_accession"] = nucleotide_record.id
@@ -115,8 +159,13 @@ def process_sample(
                 # Store original ID for GenBank download
                 original_id = nucleotide_record.id
 
-                # Write FASTA
-                nucleotide_record.id = process_id
+                # Create FASTA header based on format
+                fasta_header = create_fasta_header(
+                    nucleotide_record, header_format, process_id, taxid, taxonomy
+                )
+
+                # Write FASTA with custom header
+                nucleotide_record.id = fasta_header
                 nucleotide_record.description = ""
                 SeqIO.write(nucleotide_record, nucleotide_path, "fasta")
                 logger.info(f"Written nucleotide sequence to '{nucleotide_path}'")
@@ -153,6 +202,7 @@ def process_single_taxid(
     output_dir: Path,
     max_sequences: Optional[int] = None,
     save_genbank: bool = False,
+    header_format: str = "basic",
 ) -> None:
     try:
         # Initialise progress counters
@@ -198,11 +248,28 @@ def process_single_taxid(
         # Save protein sequences (only if protein type requested and sequences found)
         if sequence_type in ["protein", "both"] and protein_records:
             for i, record in enumerate(protein_records):
-                # Store original ID for GenBank download
+                # Store original ID for GenBank download and filename
                 original_id = record.id
+                
+                # Create safe filename from original ID
+                safe_filename = "".join(c for c in original_id if c.isalnum() or c in "._-")
+                if not safe_filename:
+                    safe_filename = f"sequence_{i+1}"
 
-                # Save FASTA
-                filename = f"{record.id}.fasta"
+                # Create FASTA header based on format
+                if header_format == "detailed":
+                    # Use the taxonomy from the record annotations
+                    record_taxonomy = record.annotations.get("taxonomy", [])
+                    fasta_header = create_fasta_header(
+                        record, header_format, original_id, taxid, record_taxonomy
+                    )
+                    record.id = fasta_header
+                # For basic format, keep the original record.id (no changes needed)
+
+                record.description = ""  # Clear description for clean FASTA
+
+                # Save FASTA using safe filename
+                filename = f"{safe_filename}.fasta"
                 output_path = output_manager.protein_dir / filename
                 SeqIO.write(record, output_path, "fasta")
                 logger.info(
@@ -211,7 +278,7 @@ def process_single_taxid(
 
                 # Save GenBank if requested
                 if save_genbank:
-                    gb_path = output_manager.protein_genbank_dir / f"{record.id}.gb"
+                    gb_path = output_manager.protein_genbank_dir / f"{safe_filename}.gb"
                     output_manager.save_genbank_file(processor.entrez, original_id, "protein", gb_path)
 
             # Save summary (only if sequences were found)
@@ -229,11 +296,28 @@ def process_single_taxid(
         # Save nucleotide sequences (only if nucleotide type requested and sequences found)
         if sequence_type in ["nucleotide", "both"] and nucleotide_records:
             for i, record in enumerate(nucleotide_records):
-                # Store original ID for GenBank download
+                # Store original ID for GenBank download and filename
                 original_id = record.id
+                
+                # Create safe filename from original ID
+                safe_filename = "".join(c for c in original_id if c.isalnum() or c in "._-")
+                if not safe_filename:
+                    safe_filename = f"sequence_{i+1}"
 
-                # Save FASTA
-                filename = f"{record.id}.fasta"
+                # Create FASTA header based on format
+                if header_format == "detailed":
+                    # Use the taxonomy from the record annotations
+                    record_taxonomy = record.annotations.get("taxonomy", [])
+                    fasta_header = create_fasta_header(
+                        record, header_format, original_id, taxid, record_taxonomy
+                    )
+                    record.id = fasta_header
+                # For basic format, keep the original record.id (no changes needed)
+
+                record.description = ""  # Clear description for clean FASTA
+
+                # Save FASTA using safe filename
+                filename = f"{safe_filename}.fasta"
                 output_path = output_manager.nucleotide_dir / filename
                 SeqIO.write(record, output_path, "fasta")
                 logger.info(
@@ -242,7 +326,7 @@ def process_single_taxid(
 
                 # Save GenBank if requested
                 if save_genbank:
-                    gb_path = output_manager.nucleotide_genbank_dir / f"{record.id}.gb"
+                    gb_path = output_manager.nucleotide_genbank_dir / f"{safe_filename}.gb"
                     output_manager.save_genbank_file(processor.entrez, original_id, "nucleotide", gb_path)
 
             # Save summary (only if sequences were found)
@@ -264,7 +348,7 @@ def process_single_taxid(
 
 # Process samples.csv
 def process_taxid_csv(
-    csv_path, gene_name, sequence_type, processor, output_manager, save_genbank=False
+    csv_path, gene_name, sequence_type, processor, output_manager, save_genbank=False, header_format="basic"
 ):
     try:
         samples_csv = Path(csv_path)
@@ -305,6 +389,7 @@ def process_taxid_csv(
                         output_manager=output_manager,
                         gene_name=gene_name,
                         save_genbank=save_genbank,
+                        header_format=header_format,
                     )
 
                     # Log progress
@@ -334,6 +419,7 @@ def process_taxonomy_csv(
     output_manager,
     entrez,
     save_genbank=False,
+    header_format="basic",
 ):
     try:
         taxonomy_csv = Path(csv_path)
@@ -478,6 +564,7 @@ def process_taxonomy_csv(
                         output_manager=output_manager,
                         gene_name=gene_name,
                         save_genbank=save_genbank,
+                        header_format=header_format,
                     )
 
                     # Log progress

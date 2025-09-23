@@ -142,6 +142,13 @@ def setup_argument_parser():
         help="Force clean start - clear output directory regardless of previous run parameters"
     )
     
+    parser.add_argument(
+    "--header",
+    choices=["basic", "detailed"],
+    default="basic",
+    help="FASTA header format: 'basic' (ID only, default) or 'detailed' (ID|taxid|accession|description|length)"
+    )
+    
     return parser
 
 def main():
@@ -251,6 +258,7 @@ def main():
             output_dir=output_dir,
             max_sequences=args.max_sequences,
             save_genbank=save_genbank,
+            header_format=args.header,
         )
         logger.info("Single taxid processing completed")
         
@@ -278,6 +286,7 @@ def main():
             processor,
             output_manager,
             save_genbank,
+            header_format=args.header,
         )
         
         # Save run info after successful completion using original for consistency
@@ -297,6 +306,7 @@ def main():
             output_manager,
             entrez,
             save_genbank,
+            header_format=args.header,
         )
         
         # Save run info after successful completion using original for consistency

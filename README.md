@@ -29,6 +29,7 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBan
 - 'Checkpointing': if a run fails/crashes, gene-fetch can be rerun using the same arguments and parameters, and it will resume from where it stopped (unless `--clean` is specified).
 - When more than 50 matching GenBank records are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders the records by sequence length, and processes the longest sequences first.
 - Can output corresponding genbank (.gb) files for each fetched nucleotide and/or protein sequences
+- Optional detail in FASTA sequence headers of retrieved sequences.
 
 ## Contents
  - [Installation](#installation)
@@ -122,6 +123,7 @@ gene-fetch --gene <gene_name> --type <sequence_type> --in <samples.csv> --out <o
 * `-ms/--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
 * `-b/--genbank`: Saves genbank (.gb) files for fetched nucleotide and/or protein sequences to `genbank/` (applies when run in 'batch' or 'single' mode).
 * `-c/--clear`: Forces clean (re)start by clearing output directory regardless of previous run parameters. If ommiting `--clear` and rerunning gene-fetch with the same arguments and parameters, checkpoing will be enabled.
+* `--header`: Dictates the format of sequence headers in output FASTA files. 'basic' = '>ID' (default). 'detailed' = '>ID|taxid|accession_number|genbank_description|length'.
 
 
 ## Examples

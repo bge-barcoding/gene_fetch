@@ -9,14 +9,16 @@
 
 
 # Activate conda env
-source path/to/profile.d/conda.sh
-conda activate gene-fetch
+#source path/to/profile.d/conda.sh
+#conda activate gene-fetch
 
 
 
 # NCBI API parameters
 EMAIL="test@example.ac.uk"
 API="test"
+
+
 
 
 # Gene search variables
@@ -41,6 +43,7 @@ gene-fetch \
     --out $OUTPUT_DIR \
     --email $EMAIL \
     --api-key $API \
-    --in $SAMPLES_CSV
+    --in $SAMPLES_CSV \
+	--header detailed
 
 
