@@ -5,7 +5,7 @@ This package fetches sequence data from NCBI databases
 using sample taxonomic information.
 """
 
-__version__ = "1.0.16"
+__version__ = "1.0.17"
 
 from .core import Config
 from .entrez_handler import EntrezHandler

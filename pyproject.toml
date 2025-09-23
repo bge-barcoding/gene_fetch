@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gene-fetch" 
-version = "1.0.16"
+version = "1.0.17"
 description = "Gene Fetch: High-throughput NCBI Sequence Retrieval Tool"
 authors = ["D. Parsons <d.parsons@nhm.ac.uk>, B. Price <b.price@nhm.ac.uk>"]
 license = "MIT"
