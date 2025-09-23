@@ -79,7 +79,8 @@ def test_main_single_taxid_mode(mock_parser, mock_save_run_info, mock_clear_outp
         nucleotide_size=1000,
         max_sequences=None,
         genbank=False,
-        clean=False  # Added missing clean attribute
+        clean=False,
+        header="basic"
     )
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
@@ -170,7 +171,8 @@ def test_main_taxid_csv_mode(mock_parser, mock_save_run_info, mock_clear_output_
         nucleotide_size=1000,
         max_sequences=None,
         genbank=False,
-        clean=False  # Added missing clean attribute
+        clean=False,
+        header="basic"
     )
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
@@ -253,7 +255,8 @@ def test_main_taxonomy_csv_mode(mock_parser, mock_save_run_info, mock_clear_outp
         nucleotide_size=1000,
         max_sequences=None,
         genbank=False,
-        clean=False  # Added missing clean attribute
+        clean=False,
+        header="basic"
     )
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
@@ -328,7 +331,8 @@ def test_main_with_advanced_options(mock_parser, mock_save_run_info, mock_clear_
         nucleotide_size=1000,
         max_sequences=10,
         genbank=True,
-        clean=False  # Added missing clean attribute
+        clean=False,
+        header="basic"
     )
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
@@ -393,7 +397,8 @@ def test_main_invalid_sequence_type(mock_parser, mock_save_run_info, mock_clear_
         nucleotide_size=1000,
         max_sequences=None,
         genbank=False,
-        clean=False  # Added missing clean attribute
+        clean=False,
+        header="basic"
     )
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
@@ -447,7 +452,8 @@ def test_main_no_input_files(mock_parser, mock_save_run_info, mock_clear_output_
         nucleotide_size=1000,
         max_sequences=None,
         genbank=False,
-        clean=False  # Added missing clean attribute
+        clean=False,
+        header="basic"
     )
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
@@ -500,7 +506,8 @@ def test_main_credential_validation_error(mock_parser, mock_save_run_info, mock_
         nucleotide_size=1000,
         max_sequences=None,
         genbank=False,
-        clean=False  # Added missing clean attribute
+        clean=False,
+        header="basic"
     )
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
@@ -538,7 +545,8 @@ def test_main_with_real_args(mock_parser, mock_save_run_info, mock_clear_output_
         nucleotide_size=1000,
         max_sequences=None,
         genbank=False,
-        clean=False  # Added missing clean attribute
+        clean=False,
+        header="basic"
     )
     mock_parser_instance.parse_args.return_value = mock_args
     mock_parser.return_value = mock_parser_instance
