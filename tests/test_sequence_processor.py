@@ -284,13 +284,16 @@ def test_try_fetch_at_taxid_nucleotide(mock_extract, mock_fetch, sequence_proces
     nucleotide_record = MagicMock(spec=SeqRecord)
     nucleotide_record.id = "NC_123456"
     nucleotide_record.seq = MagicMock()
+    nucleotide_record.description = "Mock nucleotide sequence"
     nucleotide_record.annotations = {"taxonomy": ["Eukaryota", "Viridiplantae", "Test Taxonomy"]}
     mock_fetch.return_value = nucleotide_record
-    
+
     # Mock extract_nucleotide method
     extracted_record = MagicMock(spec=SeqRecord)
     extracted_record.seq = MagicMock()
+    extracted_record.description = "Mock extracted CDS"
     mock_extract.return_value = extracted_record
+
     
     # Call method with test parameters
     (protein_found, nucleotide_found, best_taxonomy, best_matched_rank, 

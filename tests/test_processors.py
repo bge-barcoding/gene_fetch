@@ -292,6 +292,8 @@ def test_process_single_taxid_max_limit(mock_output_manager_class, mock_seqio, m
             protein_records,
             nucleotide_records,
             ["Homo", "sapiens"],
+            "species:Homo sapiens",
+            "9606",
             "species:Homo sapiens"
         )
         
