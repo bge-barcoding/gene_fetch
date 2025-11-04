@@ -121,7 +121,7 @@ gene-fetch --gene <gene_name> --type <sequence_type> --in <samples.csv> --out <o
 * `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` are ignored when run with `-s` mode). 'single' mode will fetch all (or N if specifying `--max-sequences`) target gene or protein sequences on GenBank for a specific taxonomic ID.
 * `-ms/--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
 * `-b/--genbank`: Saves genbank (.gb) files for fetched nucleotide and/or protein sequences to `genbank/` (applies when run in 'batch' or 'single' mode).
-* `-c/--clear`: Forces clean (re)start by clearing output directory regardless of previous run parameters. If ommiting `--clear` and rerunning gene-fetch with the same arguments and parameters, checkpoing will be enabled.
+* `-c/--clear`: Forces clean (re)start by clearing output directory regardless of previous run parameters. If ommiting `--clear` and rerunning gene-fetch with the same arguments and parameters, checkpointing will be enabled.
 * `--header`: Dictates the format of sequence headers in output FASTA files. 'basic' = '>ID' (default). 'detailed' = '>ID|taxid|accession_number|genbank_description|length'.
 
 
@@ -185,12 +185,26 @@ output_dir/
 ```
 
 **sequence_references.csv output example**
-| ID | taxid | protein_accession | protein_length | nucleotide_accession | nucleotide_length | matched_rank | ncbi_taxonomy | reference_name | protein_reference_path | nucleotide_reference_path |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| sample-1 | 177658 | AHF21732.1 | 510 | KF756944.1 | 1530 | genus:Apatania | Eukaryota; ...; Apataniinae; Apatania | sample-1 | abs/path/to/protein_references/sample-1.fasta | abs/path/to/protein_references/sample-1_dna.fasta |
-| sample-2 | 2719103 | QNE85983.1 | 518 | MT410852.1 | 1557 | species:Isoptena serricornis | Eukaryota; ...; Chloroperlinae; Isoptena | sample-2 | abs/path/to/protein_references/sample-2.fasta | abs/path/to/protein_references/sample-2_dna.fasta |
-| sample-3 | 1876143 | YP_009526503.1 | 512 | NC_039659.1 | 1539 | genus:Triaenodes | Eukaryota; ...; Triaenodini; Triaenodes | sample-3 | abs/path/to/protein_references/sample-3.fasta | abs/path/to/protein_references/sample-3_dna.fasta |
-
+| ID | input_taxa | first_matched_taxid | first_matched_taxid_rank | protein_accession | protein_length | nucleotide_accession | nucleotide_length | matched_rank | ncbi_taxonomy | reference_name | protein_reference_path | nucleotide_reference_path |
+| --- | --- | --- | --- | --- | --- | ---| --- | --- | --- | --- | --- | --- |
+| sample-1 | Apatania | 177658 | genus:Apatania | AHF21732.1 | 510 | KF756944.1 | 1530 | genus:Apatania | Eukaryota; ...; Apataniinae; Apatania | sample-1 | abs/path/to/protein_references/sample-1.fasta | abs/path/to/protein_references/sample-1_dna.fasta |
+| sample-2 | Isoptena serricornis | 2719103 | species:Isoptena serricornis | QNE85983.1 | 518 | MT410852.1 | 1557 | species:Isoptena serricornis | Eukaryota; ...; Chloroperlinae; Isoptena | sample-2 | abs/path/to/protein_references/sample-2.fasta | abs/path/to/protein_references/sample-2_dna.fasta |
+| sample-3 | Triaenodes conspersus | 1876143 | species:Triaenodes conspersus | YP_009526503.1 | 512 | NC_039659.1 | 1539 | genus:Triaenodes | Eukaryota; ...; Triaenodini; Triaenodes | sample-3 | abs/path/to/protein_references/sample-3.fasta | abs/path/to/protein_references/sample-3_dna.fasta |
+```
+* process_id - The unique identifier (ID) for each sample (from the input CSV)
+* input_taxa - The taxon name searched for (e.g., "Apatania" == taxid 177658), or the taxon name for the closest valid taxid found.
+* first_matched_taxid - The NCBI taxonomic ID that was searched (same as the taxid from the --in CSV, or the closest valid taxid if using --in2 as input)
+* first_matched_taxid_rank - The taxonomic rank and name of the first_matched_taxid (e.g., "genus:Astomella")
+* protein_accession - The NCBI accession number of the protein sequence retrieved (if applicable)
+* protein_length - Length of the protein sequence in amino acids (if applicable)
+* nucleotide_accession - The NCBI accession number of the nucleotide sequence retrieved (if applicable)
+* nucleotide_length - Length of the nucleotide sequence in base pairs (if applicable)
+* matched_rank - The taxonomic rank where sequences were actually found (e.g., "family:Acroceridae" if no sequences existed at the the proceeding rank, and the search traversed up the taxonomy tree)
+* ncbi_taxonomy - The complete NCBI taxonomic lineage for the retrieved sequence (semicolon-separated)
+* reference_name - Copy of the process_id (for reference purposes)
+* protein_reference_path - Full file path to the saved protein FASTA file (if applicable)
+* nucleotide_reference_path - Full file path to the saved nucleotide FASTA file (if applicable)
+```
 
 ### 'Single' mode
 ```
@@ -209,14 +223,12 @@ output_dir/
 ```
 
 **fetched_protein|nucleotide_sequences.csv output example**
-| ID | taxid | Description |
-| --- | --- | --- |
-| PQ645072.1 | 1501 | Ochlerotatus nigripes isolate Pool11 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
-| PQ645071.1 | 1537 | Ochlerotatus nigripes isolate Pool10 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
-| PQ645070.1 | 1501 | Ochlerotatus impiger isolate Pool2 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
-| PQ645069.1 | 1518	| Ochlerotatus impiger isolate Pool1 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
-| PP355486.1 | 581 | Aedes scutellaris isolate NC.033 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial |
-
+| ID | length | Description | searched_taxid
+| --- | --- | --- | --- |
+| PQ645072.1 | 1501 | Ochlerotatus nigripes isolate Pool11 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial | 508662 |
+| PQ645071.1 | 1537 | Ochlerotatus nigripes isolate Pool10 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial | 508662 |
+| PQ645070.1 | 1501 | Ochlerotatus impiger isolate Pool2 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial | 508662 |
+| PQ645069.1 | 1518	| Ochlerotatus impiger isolate Pool1 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial | 508662 |
 
 ## Running GeneFetch on a cluster
 - See 'gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular). 
@@ -247,6 +259,8 @@ GeneFetch includes the following 'hard-coded' search terms with common name vari
 - ITS1/internal transcribed spacer 1
 - ITS2/internal transcribed spacer 2
 - tRNA-Leucine/trnL
+
+
 Gene/protein targets not listed can also be searched, however, Gene Fetch will implement a more generic search term/strategy with `{target}[Title] OR {target}[Gene] OR {target}[Protein Name]`.
 Additional targets can be added if required - see `self._rRNA_genes` and '`self._protein_coding_genes` dictionaries within 'class config' (in `src/gene_fetch/core.py`) for example search terms to construct your own. You are welcome to open an [Issue](https://github.com/bge-barcoding/gene_fetch/issues/new) or create a pull request with your search term for inclusion into the main Gene Fetch release (see [Contributions and guidelines](https://github.com/bge-barcoding/gene_fetch?tab=readme-ov-file#contributions-and-guidelines) section below.
 
@@ -270,7 +284,6 @@ Additional targets can be added if required - see `self._rRNA_genes` and '`self.
 - Add optional HMM profile alignment that will attempt to extract the barcode region from certain support target genes (e.g. 658bp COI-5P barcode) [Ben].
 
 
-
 ## Contributions and guidelines
 First off, thanks for taking the time to contribute! ❤️
 
@@ -281,4 +294,4 @@ First off, thanks for taking the time to contribute! ❤️
 ## Authorship & citation
 GeneFetch was written by Dan Parsons & Ben Price @ NHMUK (2025).
 
-If you use GeneFetch, please cite our publication: Parsons et al., (2025). Gene Fetch: A Python tool for sequence retrieval from GenBank across the tree of life. Journal of Open Source Software, 10(112), 8456, https://doi.org/10.21105/joss.08456
+If you use GeneFetch, please cite our publication: Parsons and Price (2025). Gene Fetch: A Python tool for sequence retrieval from GenBank across the tree of life. Journal of Open Source Software, 10(112), 8456, https://doi.org/10.21105/joss.08456

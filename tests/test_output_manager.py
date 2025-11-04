@@ -58,12 +58,12 @@ def test_initialisation(output_manager):
         reader = csv.reader(f)
         header = next(reader)
         assert header == [
-            "process_id", "taxid", "protein_accession", "protein_length", 
+            "process_id", "input_taxa", "first_matched_taxid", "first_matched_taxid_rank",  # NEW COLUMNS
+            "protein_accession", "protein_length", 
             "nucleotide_accession", "nucleotide_length", "matched_rank", 
             "ncbi_taxonomy", "reference_name", "protein_reference_path", 
             "nucleotide_reference_path"
         ]
-
 
 def test_initialisation_with_genbank(output_manager_with_genbank):
     """OutputManager initialises correctly with GenBank dirs when enabled."""
@@ -98,7 +98,9 @@ def test_write_sequence_reference(output_manager):
     # Create test data
     test_data = {
         "process_id": "test_process",
-        "taxid": "9606",
+        "input_taxa": "Homo sapiens",
+        "first_matched_taxid": "9606",
+        "first_matched_taxid_rank": "species:Homo sapiens",
         "protein_accession": "P12345",
         "protein_length": "500",
         "nucleotide_accession": "NM_12345",
@@ -118,25 +120,30 @@ def test_write_sequence_reference(output_manager):
         next(reader)  # Skip header
         row = next(reader)
         assert row[0] == "test_process"
-        assert row[1] == "9606"
-        assert row[2] == "P12345"
-        assert row[3] == "500"
-        assert row[4] == "NM_12345"
-        assert row[5] == "1500"
-        assert row[6] == "species"
-        assert row[7] == "Homo sapiens"
-        assert row[8] == "test_process"
-        assert row[9] == "protein/P12345.fasta"
-        assert row[10] == "nucleotide/NM_12345.fasta"
+        assert row[1] == "Homo sapiens"
+        assert row[2] == "9606"
+        assert row[3] == "species:Homo sapiens"
+        assert row[4] == "P12345"
+        assert row[5] == "500"
+        assert row[6] == "NM_12345"
+        assert row[7] == "1500"
+        assert row[8] == "species"
+        assert row[9] == "Homo sapiens"
+        assert row[10] == "test_process"
+        assert row[11] == "protein/P12345.fasta"
+        assert row[12] == "nucleotide/NM_12345.fasta"
 
 
 def test_save_sequence_summary(output_manager):
     """Save summary of sequences to a CSV file."""
-    # Create test sequence records
-    sequences = [
-        SeqRecord(Seq("ACGT" * 25), id="SEQ1", description="Test sequence 1"),
-        SeqRecord(Seq("TGCA" * 50), id="SEQ2", description="Test sequence 2")
-    ]
+    # Create test sequence records with annotations
+    seq1 = SeqRecord(Seq("ACGT" * 25), id="SEQ1", description="Test sequence 1")
+    seq1.annotations["searched_taxid"] = "9606"
+    
+    seq2 = SeqRecord(Seq("TGCA" * 50), id="SEQ2", description="Test sequence 2")
+    seq2.annotations["searched_taxid"] = "9606"
+    
+    sequences = [seq1, seq2]
     
     # Save summary
     output_manager.save_sequence_summary(sequences, "test")
@@ -148,17 +155,19 @@ def test_save_sequence_summary(output_manager):
     with open(summary_path, 'r') as f:
         reader = csv.reader(f)
         header = next(reader)
-        assert header == ["Accession", "Length", "Description"]
+        assert header == ["Accession", "Length", "Description", "searched_taxid"]
         
         row1 = next(reader)
         assert row1[0] == "SEQ1"
-        assert row1[1] == "100"  # 4 * 25 = 100
+        assert row1[1] == "100"
         assert row1[2] == "Test sequence 1"
+        assert row1[3] == "9606"
         
         row2 = next(reader)
         assert row2[0] == "SEQ2"
-        assert row2[1] == "200"  # 4 * 50 = 200
+        assert row2[1] == "200"
         assert row2[2] == "Test sequence 2"
+        assert row2[3] == "9606"
 
 
 @patch('gene_fetch.output_manager.EntrezHandler')

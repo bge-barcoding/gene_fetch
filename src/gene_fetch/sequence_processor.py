@@ -465,7 +465,7 @@ class SequenceProcessor:
             if found_cds:
                 break
 
-            # If no exact match found, try the more general matching for any variant
+        # If no exact match found, try the more general matching for any variant
         if not found_cds:
             for feature in record.features:
                 if feature.type != "CDS":
@@ -490,12 +490,14 @@ class SequenceProcessor:
             try:
                 cds_record = record[:]
                 cds_record.seq = found_cds.extract(record.seq)
-
-                if len(cds_record.seq) >= 100:  # Sanity check for minimum length
-                    logger.info(
-                        f"Successfully extracted CDS of length {len(cds_record.seq)} "
-                        f"(accession {record.id})"
-                    )
+                
+                if len(cds_record.seq) >= 100:
+                    # Try to preserve description
+                    if not cds_record.description or cds_record.description == cds_record.id:
+                        logger.info(f"Description empty or just ID, attempting to restore from: '{record.description}'")
+                        cds_record.description = record.description
+                    
+                    logger.info(f"Successfully extracted CDS of length {len(cds_record.seq)} (accession {record.id})")
                     return cds_record
                 else:
                     logger.warning(
@@ -1273,7 +1275,7 @@ class SequenceProcessor:
                 if gene_name.lower() in self.config._rRNA_genes:
                     search_exclusions = " NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]"
 
-                if fetch_all:
+                if fetch_all and self.config.nucleotide_length_threshold <= 0:
                     nucleotide_search = f"{self.config.gene_search_term}{search_exclusions} AND txid{current_taxid}[Organism:exp]"
                 else:
                     nucleotide_search = (
@@ -1493,8 +1495,14 @@ class SequenceProcessor:
                                             logger.info(
                                                 f"Using extracted CDS in search results (accession {temp_record.id})"
                                             )
+                                                                                        
+                                            ##### DEBUGGING
+                                            logger.info(f"CDS record description BEFORE appending: '{cds_record.description}'")
+
                                             if fetch_all:
                                                 nucleotide_records.append(cds_record)
+                                                ##### DEBUGGING
+                                                logger.info(f"CDS record description AFTER appending: '{nucleotide_records[-1].description}'")
                                                 nucleotide_found = True
                                                 if not best_taxonomy:
                                                     best_taxonomy = (
@@ -1585,12 +1593,17 @@ class SequenceProcessor:
         sequence_type: str,
         fetch_all: bool = False,
         progress_counters: Optional[Dict[str, int]] = None,
-    ) -> Tuple[List[SeqRecord], List[SeqRecord], List[str], str]:
+    ) -> Tuple[List[SeqRecord], List[SeqRecord], List[str], str, Optional[str], Optional[str]]:
+        
         # Initialise empty lists for records
         protein_records = []
         nucleotide_records = []
         best_taxonomy = []
         best_matched_rank = None
+        
+        # Capture first_matched_taxid_rank
+        first_matched_taxid = taxid  # The input taxid is always the first matched taxid
+        first_matched_taxid_rank = None  # Will be set below
 
         # Fetch taxonomy first (from cache if available)
         logger.debug(f"Starting sequence search for {gene_name} using taxid {taxid}")
@@ -1601,13 +1614,16 @@ class SequenceProcessor:
             logger.error(
                 f"Could not fetch taxonomy for taxID ({taxid}), cannot search for sequences"
             )
-            return [], [], [], "No taxonomy found"
+            return [], [], [], "No taxonomy found", None, None
 
         # Get ordered list of ranks to traverse
         current_taxonomy = taxonomy[:]
         current_taxon = current_taxonomy.pop()  # Start with species
         current_rank = taxon_ranks.get(current_taxon, "unknown")
         current_taxid = taxid
+        
+        # Set the first_matched_taxid_rank
+        first_matched_taxid_rank = f"{current_rank}:{current_taxon}"
 
         # Traverse taxonomy from species up
         while True:
@@ -1687,7 +1703,7 @@ class SequenceProcessor:
             # Single taxid mode: return what was found
             if not protein_records and not nucleotide_records:
                 logger.warning("No sequences found")
-                return [], [], [], "No match"
+                return [], [], [], "No match", None, None
             logger.info(
                 f"Single taxid mode: Found {len(protein_records)} protein and {len(nucleotide_records)} nucleotide sequences"
             )
@@ -1696,6 +1712,8 @@ class SequenceProcessor:
                 nucleotide_records,
                 best_taxonomy,
                 matched_rank,
+                first_matched_taxid,
+                first_matched_taxid_rank,
             )
         else:
             # Batch mode: require both for 'both' type
@@ -1705,16 +1723,16 @@ class SequenceProcessor:
                 logger.warning(
                     "Failed to find both protein and corresponding nucleotide sequence"
                 )
-                return [], [], [], "No match"
+                return [], [], [], "No match", None, None
             elif sequence_type == "protein" and not protein_records:
                 logger.warning("No protein sequence found")
-                return [], [], [], "No match"
+                return [], [], [], "No match", None, None
             elif sequence_type == "nucleotide" and not nucleotide_records:
                 logger.warning("No nucleotide sequence found")
-                return [], [], [], "No match"
+                return [], [], [], "No match", None, None
 
         logger.info(f"Search completed! Matched at rank: {matched_rank}")
-        return protein_records, nucleotide_records, best_taxonomy, matched_rank
+        return protein_records, nucleotide_records, best_taxonomy, matched_rank, first_matched_taxid, first_matched_taxid_rank
 
     # Extract rRNA feature of specified type from record
     def extract_rRNA(self, record, gene_name, single_mode=False):

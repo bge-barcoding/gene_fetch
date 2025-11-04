@@ -293,7 +293,8 @@ def test_try_fetch_at_taxid_nucleotide(mock_extract, mock_fetch, sequence_proces
     mock_extract.return_value = extracted_record
     
     # Call method with test parameters
-    protein_found, nucleotide_found, best_taxonomy, best_matched_rank, protein_records, nucleotide_records = (
+    (protein_found, nucleotide_found, best_taxonomy, best_matched_rank, 
+     protein_records, nucleotide_records) = (
         sequence_processor.try_fetch_at_taxid(
             "9606", "species", "Homo sapiens", "nucleotide", "rbcl", 
             [], [], [], None, False, None
@@ -341,7 +342,8 @@ def test_search_and_fetch_sequences(mock_try_fetch, sequence_processor):
     ]
     
     # Call method
-    protein_records, nucleotide_records, best_taxonomy, matched_rank = (
+    (protein_records, nucleotide_records, best_taxonomy, matched_rank,
+     first_matched_taxid, first_matched_taxid_rank) = (
         sequence_processor.search_and_fetch_sequences(
             "9606", "rbcl", "nucleotide", False, None
         )
@@ -353,6 +355,8 @@ def test_search_and_fetch_sequences(mock_try_fetch, sequence_processor):
     assert nucleotide_records[0] == nucleotide_record
     assert best_taxonomy == ["Eukaryota", "Viridiplantae"]
     assert matched_rank == "phylum:Streptophyta"
+    assert first_matched_taxid == "9606"
+    assert first_matched_taxid_rank == "species:Homo sapiens"
     
     # Verify try_fetch_at_taxid was called twice (once at species, once at phylum)
     assert mock_try_fetch.call_count == 2

@@ -73,6 +73,7 @@ def process_sample(
     gene_name: str,
     save_genbank: bool = False,
     header_format: str = "basic",
+    input_taxa: str = "",
 ) -> None:
     try:
         # Define output paths
@@ -92,7 +93,7 @@ def process_sample(
             return
 
         # Fetch sequences (returns lists)
-        protein_records, nucleotide_records, taxonomy, matched_rank = (
+        protein_records, nucleotide_records, taxonomy, matched_rank, first_matched_taxid, first_matched_taxid_rank = (
             processor.search_and_fetch_sequences(taxid, gene_name, sequence_type)
         )
 
@@ -103,7 +104,9 @@ def process_sample(
         sequences_found = False
         result_data = {
             "process_id": process_id,
-            "taxid": taxid,
+            "input_taxa": input_taxa,
+            "first_matched_taxid": first_matched_taxid if first_matched_taxid else taxid,
+            "first_matched_taxid_rank": first_matched_taxid_rank if first_matched_taxid_rank else "unknown",
             "matched_rank": matched_rank,
             "taxonomy": "; ".join(taxonomy) if taxonomy else "",
         }
@@ -212,7 +215,7 @@ def process_single_taxid(
         }
 
         # Fetch all sequences with progress tracking
-        protein_records, nucleotide_records, taxonomy, matched_rank = (
+        protein_records, nucleotide_records, taxonomy, matched_rank, first_matched_taxid, first_matched_taxid_rank = (  # UPDATED
             processor.search_and_fetch_sequences(
                 taxid,
                 gene_name,
@@ -225,6 +228,13 @@ def process_single_taxid(
         if not protein_records and not nucleotide_records:
             logger.warning(f"No sequences found for taxid {taxid}")
             return
+
+        # Add searched_taxid to all records for CSV summary
+        for record in protein_records:
+            record.annotations["searched_taxid"] = taxid
+
+        for record in nucleotide_records:
+            record.annotations["searched_taxid"] = taxid
 
         # Apply maximum sequence limit if specified
         if max_sequences is not None:
@@ -298,6 +308,7 @@ def process_single_taxid(
             for i, record in enumerate(nucleotide_records):
                 # Store original ID for GenBank download and filename
                 original_id = record.id
+                original_description = record.description  # Save the record rescription as well
                 
                 # Create safe filename from original ID
                 safe_filename = "".join(c for c in original_id if c.isalnum() or c in "._-")
@@ -314,7 +325,7 @@ def process_single_taxid(
                     record.id = fasta_header
                 # For basic format, keep the original record.id (no changes needed)
 
-                record.description = ""  # Clear description for clean FASTA
+                record.description = ""  # Clear description for a 'clean' FASTA header
 
                 # Save FASTA using safe filename
                 filename = f"{safe_filename}.fasta"
@@ -324,6 +335,9 @@ def process_single_taxid(
                     f"Written nucleotide sequence {i+1}/{len(nucleotide_records)} to '{output_path}'"
                 )
 
+                # RESTORE THE DESCRIPTION for the CSV summary
+                record.description = original_description
+                
                 # Save GenBank if requested
                 if save_genbank:
                     gb_path = output_manager.nucleotide_genbank_dir / f"{safe_filename}.gb"
@@ -367,7 +381,7 @@ def process_taxid_csv(
             f.seek(0)
             next(reader)
 
-            # Initialize progress tracking
+            # Initialise progress tracking
             log_progress(0, total_samples)
 
             # Process each sample
@@ -380,7 +394,17 @@ def process_taxid_csv(
                     logger.info(
                         f"====== Processing sample {i}/{total_samples}: {process_id} (taxID: {taxid}) ======"
                     )
-
+                    
+                    # Fetch taxon name for this taxid
+                    input_taxa = ""
+                    try:
+                        taxonomy, taxon_ranks, initial_rank, taxon_ids = processor.entrez.fetch_taxonomy(taxid)
+                        if taxonomy:
+                            # Get the most specific taxon name (last item in taxonomy list)
+                            input_taxa = taxonomy[-1] if taxonomy else ""
+                    except Exception as e:
+                        logger.warning(f"Could not fetch taxon name for taxid {taxid}: {e}")
+                    
                     process_sample(
                         process_id=process_id,
                         taxid=taxid,
@@ -390,6 +414,7 @@ def process_taxid_csv(
                         gene_name=gene_name,
                         save_genbank=save_genbank,
                         header_format=header_format,
+                        input_taxa=input_taxa,
                     )
 
                     # Log progress
@@ -537,6 +562,7 @@ def process_taxonomy_csv(
                         continue
 
                     # Fetch taxid from taxonomic information
+                    # Fetch taxid from taxonomic information
                     taxid = entrez.fetch_taxid_from_taxonomy(
                         phylum, class_name, order, family, genus, species
                     )
@@ -549,6 +575,9 @@ def process_taxonomy_csv(
                             process_id, "unknown", "Could not resolve taxid"
                         )
                         continue
+
+                    # Construct input_taxa from most specific taxonomic rank
+                    input_taxa = species if species else (genus if genus else (family if family else (order if order else (class_name if class_name else phylum))))
 
                     logger.info(f"Starting sequence search:")
                     logger.info(
@@ -565,6 +594,7 @@ def process_taxonomy_csv(
                         gene_name=gene_name,
                         save_genbank=save_genbank,
                         header_format=header_format,
+                        input_taxa=input_taxa,
                     )
 
                     # Log progress

@@ -76,7 +76,9 @@ class OutputManager:
                 writer.writerow(
                     [
                         "process_id",
-                        "taxid",
+                        "input_taxa",
+                        "first_matched_taxid",
+                        "first_matched_taxid_rank",
                         "protein_accession",
                         "protein_length",
                         "nucleotide_accession",
@@ -88,7 +90,7 @@ class OutputManager:
                         "nucleotide_reference_path",
                     ]
                 )
-
+                
     # Log any failed sequence searches in csv
     def log_failure(self, process_id: str, taxid: str, error_type: str):
         with open(self.failed_searches_path, "a", newline="") as f:
@@ -114,7 +116,9 @@ class OutputManager:
             writer.writerow(
                 [
                     data["process_id"],
-                    data["taxid"],
+                    data.get("input_taxa", ""),
+                    data.get("first_matched_taxid", ""),
+                    data.get("first_matched_taxid_rank", ""),
                     data.get("protein_accession", ""),
                     data.get("protein_length", ""),
                     data.get("nucleotide_accession", ""),
@@ -137,15 +141,16 @@ class OutputManager:
 
         with open(file_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["Accession", "Length", "Description"])
+            writer.writerow(["Accession", "Length", "Description", "searched_taxid"])
 
             for record in sequences:
                 # Get the full description/name
                 description = record.description
                 accession = record.id
                 length = len(record.seq)
+                searched_taxid = record.annotations.get("searched_taxid", "")
 
-                writer.writerow([accession, length, description])
+                writer.writerow([accession, length, description, searched_taxid])
 
         logger.info(f"Wrote {file_type} sequence summary to {file_path}")
 

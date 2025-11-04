@@ -33,14 +33,21 @@ def mock_processor():
         [protein_record],  # protein_records
         [nucleotide_record],  # nucleotide_records
         ["Homo", "sapiens"],  # taxonomy
-        "species:Homo sapiens"  # matched_rank
+        "species:Homo sapiens",  # matched_rank
+        "9606",  # first_matched_taxid
+        "species:Homo sapiens"  # first_matched_taxid_rank
     )
     
     # Mock entrez property
     processor.entrez = MagicMock(spec=EntrezHandler)
+    processor.entrez.fetch_taxonomy.return_value = (
+        ["Homo", "sapiens"],
+        {"Homo sapiens": "species"},
+        "species",
+        {"Homo sapiens": "9606"}
+    )
     
     return processor
-
 
 @pytest.fixture
 def mock_output_manager():
@@ -146,7 +153,9 @@ def test_process_sample_no_sequences(mock_seqio, mock_processor, mock_output_man
         [],  # protein_records
         [],  # nucleotide_records
         [],  # taxonomy
-        "No match"  # matched_rank
+        "No match",  # matched_rank
+        None, # first_matched_taxid
+        None # first_matched_taxid_rank
     )
     
     # Call function
@@ -211,6 +220,8 @@ def test_process_single_taxid(mock_output_manager_class, mock_seqio, mock_proces
             protein_records,
             nucleotide_records,
             ["Homo", "sapiens"],
+            "species:Homo sapiens",
+            "9606",
             "species:Homo sapiens"
         )
         
