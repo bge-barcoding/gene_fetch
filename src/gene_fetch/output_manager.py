@@ -75,7 +75,7 @@ class OutputManager:
                 writer = csv.writer(f)
                 writer.writerow(
                     [
-                        "process_id",
+                        "ID",
                         "input_taxa",
                         "first_matched_taxid",
                         "first_matched_taxid_rank",

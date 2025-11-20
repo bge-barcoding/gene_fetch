@@ -10,25 +10,23 @@
 
 
 # GeneFetch 
-Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBank sequence database based on taxonomy IDs (taxids) or taxonomic heirarchies. It can retrieve both protein and/or nucleotide sequences for various genes, including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S).
+Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBank sequence database based on taxonomy IDs (taxids) or taxonomic heirarchies (phylum->species). It can retrieve protein and/or nucleotide sequences for various 'supported' loci (including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S). Gene Fetch can be run for 'unsupported' loci, although the quality of the returned sequence data cannot be guaranteed. 
 
 
 ## Highlight features
 - Fetch protein and/or nucleotide sequences from NCBI's GenBank database without constructing NCBI search terms.
-- Handles both direct nucleotide sequences and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
-- Support for both protein-coding and rDNA genes.
+- Handles both direct nucleotide sequence searching, and protein-linked nucleotide searches (CDS extraction includes fallback mechanisms for atypical annotation formats).
 - Seqeunce matches are made by searching for the target gene and/ protein in the GenBank annotation (feature table). 
-- Customisable length filtering thresholds for protein and nucleotide sequences (default: protein=500aa. nucleotide=1000bp).
-- Default "batch" mode processes multiple input taxa based on a user-specified CSV file.
-- Configurable "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon (default length thresholds can be bypassed by setting the value to zero or a negative number).
-- Automatic taxonomy traversal: Uses fetched NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level. i.e., Search at given taxid level (e.g., species), if no sequences are found, escalate species->phylum until a suitable sequence is found.
-- Taxonomic validation: validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxa name is used for different taxa across the tree of life).
-- Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second). Caches taxonomy lookups for reduced API calls.
+- Contains customisable length filtering thresholds for protein and nucleotide sequences.
+- Default "batch" mode processes multiple input taxa based on a user-specified CSV file, as well as "single" mode (-s/--single) for retrieving a specified number of target sequences for a particular taxon.
+- Implements automatic taxonomy traversal ("batch" mode only), utilising the returned NCBI taxonomic lineage for a given taxid when sequences are not found at the input taxonomic level (i.e. If searching at a given taxid level (e.g., species) and no sequences are found, traverse 'up' a rank (species->phylum) until a suitable sequence is found).
+- Validates fetched sequence taxonomy against input taxonomic heirarchy, avoiding potential taxonomic homonyms (i.e. when the same taxa name is used for different taxa across the tree of life).
 - Handles complex sequence features (e.g., complement strands, joined sequences, WGS entries) in addition to 'simple' cds extaction (if --type nucleotide/both). The tool avoids "unverified" sequences and WGS entries not containing sequence data (i.e. master records).
-- 'Checkpointing': if a run fails/crashes, gene-fetch can be rerun using the same arguments and parameters, and it will resume from where it stopped (unless `--clean` is specified).
+- 'Checkpointing' functionality, so that if a run fails/crashes, gene-fetch can be rerun using the same arguments and parameters to resume from where it stopped (unless `--clean` is specified).
 - When more than 50 matching GenBank records are found for a sample, the tool fetches summary information for all matches (using NCBI esummary API), orders the records by sequence length, and processes the longest sequences first.
-- Can output corresponding genbank (.gb) files for each fetched nucleotide and/or protein sequences
+- Can output corresponding genbank (.gb) files for each fetched nucleotide and/or protein sequences.
 - Optional detail in FASTA sequence headers of retrieved sequences.
+- Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second). Caches taxonomy lookups for reduced API calls.
 
 ## Contents
  - [Installation](#installation)
@@ -116,8 +114,8 @@ gene-fetch --gene <gene_name> --type <sequence_type> --in <samples.csv> --out <o
 * `o/--out`: Path to output directory. The directory will be created if it does not exist.
 * `e/--email` and `-k/--api-key`: Email address and associated API key for NCBI account. An NCBI account is required to run this tool (due to otherwise strict API limitations) - information on how to create an NCBI account and find your API key can be found [here](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
 ### Optional arguments
-* `-ps/--protein-size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500).
-* `-ns/--nucleotide-size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1000).
+* `-ps/--protein-size`: Minimum protein sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 500aa).
+* `-ns/--nucleotide-size`: Minimum nucleotide sequence length filter. Applicable to mode 'batch' and 'single' search modes (default: 1000bp).
 * `s/--single`: Taxonomic ID for 'single' sequence search mode (`-i` and `-i2` are ignored when run with `-s` mode). 'single' mode will fetch all (or N if specifying `--max-sequences`) target gene or protein sequences on GenBank for a specific taxonomic ID.
 * `-ms/--max-sequences`: Maximum number of sequences to fetch for a specific taxonomic ID (only applies when run in 'single' mode).
 * `-b/--genbank`: Saves genbank (.gb) files for fetched nucleotide and/or protein sequences to `genbank/` (applies when run in 'batch' or 'single' mode).
@@ -191,7 +189,7 @@ output_dir/
 | sample-2 | Isoptena serricornis | 2719103 | species:Isoptena serricornis | QNE85983.1 | 518 | MT410852.1 | 1557 | species:Isoptena serricornis | Eukaryota; ...; Chloroperlinae; Isoptena | sample-2 | abs/path/to/protein_references/sample-2.fasta | abs/path/to/protein_references/sample-2_dna.fasta |
 | sample-3 | Triaenodes conspersus | 1876143 | species:Triaenodes conspersus | YP_009526503.1 | 512 | NC_039659.1 | 1539 | genus:Triaenodes | Eukaryota; ...; Triaenodini; Triaenodes | sample-3 | abs/path/to/protein_references/sample-3.fasta | abs/path/to/protein_references/sample-3_dna.fasta |
 ```
-* process_id - The unique identifier (ID) for each sample (from the input CSV)
+* ID - The unique identifier (ID) for each sample (from the input CSV)
 * input_taxa - The taxon name searched for (e.g., "Apatania" == taxid 177658), or the taxon name for the closest valid taxid found.
 * first_matched_taxid - The NCBI taxonomic ID that was searched (same as the taxid from the --in CSV, or the closest valid taxid if using --in2 as input)
 * first_matched_taxid_rank - The taxonomic rank and name of the first_matched_taxid (e.g., "genus:Astomella")
@@ -201,7 +199,7 @@ output_dir/
 * nucleotide_length - Length of the nucleotide sequence in base pairs (if applicable)
 * matched_rank - The taxonomic rank where sequences were actually found (e.g., "family:Acroceridae" if no sequences existed at the the proceeding rank, and the search traversed up the taxonomy tree)
 * ncbi_taxonomy - The complete NCBI taxonomic lineage for the retrieved sequence (semicolon-separated)
-* reference_name - Copy of the process_id (for reference purposes)
+* reference_name - Copy of the ID (for reference purposes)
 * protein_reference_path - Full file path to the saved protein FASTA file (if applicable)
 * nucleotide_reference_path - Full file path to the saved nucleotide FASTA file (if applicable)
 ```

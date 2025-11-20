@@ -58,7 +58,7 @@ def test_initialisation(output_manager):
         reader = csv.reader(f)
         header = next(reader)
         assert header == [
-            "process_id", "input_taxa", "first_matched_taxid", "first_matched_taxid_rank",  # NEW COLUMNS
+            "ID", "input_taxa", "first_matched_taxid", "first_matched_taxid_rank",
             "protein_accession", "protein_length", 
             "nucleotide_accession", "nucleotide_length", "matched_rank", 
             "ncbi_taxonomy", "reference_name", "protein_reference_path", 
