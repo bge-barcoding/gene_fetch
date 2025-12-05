@@ -1771,10 +1771,10 @@ class SequenceProcessor:
 
         # Define alternative names for different rRNA types
         rRNA_alternatives = {
-            "16s": ["16s", "rrs", "rrn16", "ssu"],  # Small subunit bacterial
-            "18s": ["18s", "rrn18", "ssu"],  # Small subunit eukaryotic
-            "23s": ["23s", "rrl", "rrn23", "lsu"],  # Large subunit bacterial
-            "28s": ["28s", "rrn28", "lsu"],  # Large subunit eukaryotic
+            "16s": ["16s", "rrs", "rrn16", "ssu", "small subunit"],  # Small subunit bacterial
+            "18s": ["18s", "rrn18", "ssu", "small subunit"],  # Small subunit eukaryotic
+            "23s": ["23s", "rrl", "rrn23", "lsu", "large subunit"],  # Large subunit bacterial
+            "28s": ["28s", "rrn28", "lsu", "large subunit"],  # Large subunit eukaryotic
             "12s": ["12s", "mt-rrn1", "mt 12s"],  # Mitochondrial SSU
             "5s": ["5s", "rrn5", "rrn5s", "rrna 5s"],  # 5S bacterial
         }
