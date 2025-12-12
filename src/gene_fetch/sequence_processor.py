@@ -208,7 +208,7 @@ class SequenceProcessor:
             variations = self.config._protein_coding_genes[base_gene]
             gene_variations = {v.split("[")[0].strip('"').lower() for v in variations}
 
-            # Add common pattern variations for different writing styles
+            # Common pattern variations for different naming conventions
             if base_gene == "rbcl":
                 pattern_variations = [
                     "rbcl",
@@ -332,6 +332,17 @@ class SequenceProcessor:
                 "16 s",
                 "rrn16",
                 "rrn 16",
+            ]
+        elif base_gene == "12s" or base_gene == "12s rrna" or base_gene == "rrn12":
+            pattern_variations = [
+                "12s",
+                "12s rrna",
+                "12s ribosomal rna",
+                "12s ribosomal",
+                "12 s rrna",
+                "12 s",
+                "rrn12",
+                "rrn 12"
             ]
         elif base_gene == "18s" or base_gene == "18s rrna" or base_gene == "rrn18":
             pattern_variations = [
@@ -1049,7 +1060,7 @@ class SequenceProcessor:
                             # Get summaries and sort by length
                             try:
                                 sorted_summaries = []
-                                batch_size = 200
+                                batch_size = 500
 
                                 for i in range(0, len(id_list), batch_size):
                                     batch_ids = id_list[i : i + batch_size]
@@ -1093,9 +1104,9 @@ class SequenceProcessor:
                                         key=lambda x: x[1], reverse=True
                                     )
 
-                                    # Take only top 250 IDs by sequence length
+                                    # Take only top 10 IDs by sequence length (provides fallback if some records are invalid)
                                     processed_ids = [
-                                        item[0] for item in sorted_summaries[:250]
+                                        item[0] for item in sorted_summaries[:10]
                                     ]
                                     logger.info(
                                         f"Successfully filtered to top proteins by length (longest: {sorted_summaries[0][1]} aa)"
@@ -1351,9 +1362,9 @@ class SequenceProcessor:
                                         key=lambda x: x[1], reverse=True
                                     )
 
-                                    # Take only top 250 IDs by sequence length
+                                    # Take only top 10 IDs by sequence length (provides fallback if some records are invalid)
                                     processed_ids = [
-                                        item[0] for item in sorted_summaries[:250]
+                                        item[0] for item in sorted_summaries[:10]
                                     ]
                                     logger.info(
                                         f"Successfully filtered to top nucleotide sequences by length (longest: {sorted_summaries[0][1]} bp)"
@@ -1771,11 +1782,12 @@ class SequenceProcessor:
 
         # Define alternative names for different rRNA types
         rRNA_alternatives = {
-            "16s": ["16s", "rrs", "rrn16", "ssu", "small subunit"],  # Small subunit bacterial
+            "16s": ["16s", "rrs", "rrn16", "ssu", "small subunit", "s-rrna"],  # Small subunit bacterial
             "18s": ["18s", "rrn18", "ssu", "small subunit"],  # Small subunit eukaryotic
-            "23s": ["23s", "rrl", "rrn23", "lsu", "large subunit"],  # Large subunit bacterial
-            "28s": ["28s", "rrn28", "lsu", "large subunit"],  # Large subunit eukaryotic
-            "12s": ["12s", "mt-rrn1", "mt 12s"],  # Mitochondrial SSU
+            "23s": ["23s", "rrl", "rrn23", "lsu", "large subunit", "l-rrna"],  # Large subunit bacterial
+            "28s": ["28s", "rrn28", "lsu", "large subunit", "l-rrna"],  # Large subunit eukaryotic
+            "12s": ["12s", "mt-rrn1", "mt-rnr1", "mt 12s", "s-rrna"],  # Mitochondrial SSU
+            "16s": ["16s", "mt-rrn2", "mt-rnr2", "mt 16s", "l-rrna"],  # Mitochondrial LSU
             "5s": ["5s", "rrn5", "rrn5s", "rrna 5s"],  # 5S bacterial
         }
 
