@@ -288,6 +288,8 @@ class Config:
             "psbA": "psba",
             "trnh-psba": "psba",
             "psba-trnh": "psba",
+            "lsu": "28s",
+            "ssu": "18s",
         }
     
         # Define gene type categories
@@ -329,7 +331,7 @@ class Config:
                 "28S rRNA[Gene]",
                 "rrn28[Gene]",
                 "LSU rRNA[Gene]",
-                "28S ribosomal RNA[rRNA]"
+                "28S ribosomal RNA[rRNA]",
                 "28S rRNA[rRNA]",
                 "LSU rRNA[rRNA]",
                 "rrn28[rRNA]",
