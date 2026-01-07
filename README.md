@@ -12,6 +12,7 @@
 # GeneFetch 
 Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBank sequence database based on taxonomy IDs (taxids) or taxonomic heirarchies (phylum->species). It can retrieve protein and/or nucleotide sequences for various 'supported' loci (including protein-coding genes (e.g., cox1, cytb, rbcl, matk) and rRNA genes (e.g., 16S, 18S). Gene Fetch can be run for 'unsupported' loci, although the quality of the returned sequence data cannot be guaranteed. 
 
+---
 
 ## Highlight features
 - Fetch protein and/or nucleotide sequences from NCBI's GenBank database without constructing NCBI search terms.
@@ -28,19 +29,22 @@ Gene Fetch enables high-throughput retreival of sequence data from NCBI's GenBan
 - Optional detail in FASTA sequence headers of retrieved sequences.
 - Robust error handling, progress tracking, and logging, with compliance to NCBI API rate limits (10 requests/second). Caches taxonomy lookups for reduced API calls.
 
+---
+
 ## Contents
  - [Installation](#installation)
  - [Usage](#usage)
- - [Examples](#Examples)
+ - [Examples](#examples)
  - [Input](#input)
  - [Output](#output)
- - [Cluster](#running-gene_fetch-on-a-cluster)
+ - [Cluster](#running-gene-fetch-on-a-cluster)
  - [Supported targets](#supported-targets)
- - [Notes](#notes)
  - [Benchmarking](#benchmarking)
- - [Future developments](#future-developments)
- - [Contributions and citation](#contributions-and-citations)
+ - [Future developments](#future-development)
+ -  [Contributions and guidelines](#contributions-and-guidelines)
 
+
+---
 
 ## Installation
 - Due to the risk of dependency conflicts, it's recommended to install Gene Fetch in a Conda environment.
@@ -81,7 +85,9 @@ cd gene_fetch
 python /path/to/gene_fetch.py [options]
 
 ```
-  
+
+---
+
 ## Recommended: Testing
 - The Gene Fetch package includes some basic tests for each module that we recommend are run after installation.
 ```bash
@@ -99,6 +105,8 @@ pip install -e .
 pytest
 ```
 * This will take a few minutes to run the tests. You will get 1 warning regarding API credentials as these are not provided in the basic tests.
+
+---
 
 ## Usage
 ```bash
@@ -122,6 +130,7 @@ gene-fetch --gene <gene_name> --type <sequence_type> --in <samples.csv> --out <o
 * `-c/--clear`: Forces clean (re)start by clearing output directory regardless of previous run parameters. If ommiting `--clear` and rerunning gene-fetch with the same arguments and parameters, checkpointing will be enabled.
 * `--header`: Dictates the format of sequence headers in output FASTA files. 'basic' = '>ID' (default). 'detailed' = '>ID|taxid|accession_number|genbank_description|length'.
 
+---
 
 ## Examples
 Fetch both protein and nucleotide sequences for COI with default sequence length thresholds, and store the corresponding genbank records.
@@ -145,6 +154,7 @@ gene-fetch -e your.email@domain.com -k your_api_key \
             --type protein --protein-size 400 --max-sequences 100
 ```
 
+---
 
 ## Input
 **Example 'samples.csv' input file (-i/--in)**
@@ -228,7 +238,9 @@ output_dir/
 | PQ645070.1 | 1501 | Ochlerotatus impiger isolate Pool2 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial | 508662 |
 | PQ645069.1 | 1518	| Ochlerotatus impiger isolate Pool1 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial | 508662 |
 
-## Running GeneFetch on a cluster
+---
+
+## Running Gene Fetch on a cluster
 - See 'gene_fetch.sh' for running gene_fetch.py on a HPC cluster (SLURM job schedular). 
 - Edit 'mem' and/or 'cpus-per-task' to set memory and CPU/threads - allocating lots of CPUs is unecessary as Gene Fetch is not paralellised (yet). The tool should run well with 4-10G memory and 1-2 CPUs.
 - Change paths and variables as needed.
@@ -236,6 +248,8 @@ output_dir/
 ```
 sbatch gene_fetch.sh
 ```
+
+---
 
 ## Supported targets
 GeneFetch includes the following 'hard-coded' search terms with common name variations for 'smarter' searching of the targets listed below. 
@@ -262,6 +276,8 @@ GeneFetch includes the following 'hard-coded' search terms with common name vari
 Gene/protein targets not listed can also be searched, however, Gene Fetch will implement a more generic search term/strategy with `{target}[Title] OR {target}[Gene] OR {target}[Protein Name]`.
 Additional targets can be added if required - see `self._rRNA_genes` and '`self._protein_coding_genes` dictionaries within 'class config' (in `src/gene_fetch/core.py`) for example search terms to construct your own. You are welcome to open an [Issue](https://github.com/bge-barcoding/gene_fetch/issues/new) or create a pull request with your search term for inclusion into the main Gene Fetch release (see [Contributions and guidelines](https://github.com/bge-barcoding/gene_fetch?tab=readme-ov-file#contributions-and-guidelines) section below.
 
+---
+
 ## Benchmarking
 | Sample Description | Run Mode | Target | Input File | Data Type | Memory | CPUs | Run Time (hh:mm:ss) |
 |--------------------|----------|--------|------------|-----------|--------|------|----------|
@@ -274,13 +290,15 @@ Additional targets can be added if required - see `self._rRNA_genes` and '`self.
 | 1000 _M. tubercolisis_ sequences | Single | 16S | N/A | nucleotide | 4G | 1 | 01:23:54 |
 * All benchmarking runs were performed on a SLURM-managed HPC cluster running Debian 12 ("Bookworm), with each job allocated a modest 1 CPU and 4 GB RAM.
 
+---
+
 ## Future Development
 - Add optional alignment of retrieved sequences [Ben].
 - Further improve efficiency of record searching and selecting the longest sequence [Dan].
 - Add support for additional genetic markers beyond the currently supported set [Dan].
-- Add BOLD query falback if no 'quality' sequence is found in GenBank [Ben].
 - Add optional HMM profile alignment that will attempt to extract the barcode region from certain support target genes (e.g. 658bp COI-5P barcode) [Ben].
 
+---
 
 ## Contributions and guidelines
 First off, thanks for taking the time to contribute! ❤️
