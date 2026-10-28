@@ -190,6 +190,21 @@ def test_config_set_gene_search_term_rRNA():
     assert search_type == "rRNA"
 
 
+def test_config_set_gene_search_term_rRNA_subunit_phrases():
+    """Test 18S/28S search terms include 'small/large subunit ribosomal RNA' title phrases."""
+    config = Config(email="test@example.com", api_key="valid_test_key_12345")
+
+    config.set_gene_search_term("18s")
+    assert '"small subunit ribosomal RNA"[Title]' in config.gene_search_term
+
+    config.set_gene_search_term("28s")
+    assert '"large subunit ribosomal RNA"[Title]' in config.gene_search_term
+
+    # Mitochondrial rRNA search terms should be unchanged
+    config.set_gene_search_term("12s")
+    assert "subunit ribosomal RNA" not in config.gene_search_term
+
+
 def test_config_set_gene_search_term_protein_coding():
     """Test setting gene search term for protein-coding genes."""
     config = Config(email="test@example.com", api_key="valid_test_key_12345")

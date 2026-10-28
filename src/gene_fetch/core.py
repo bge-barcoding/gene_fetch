@@ -315,6 +315,7 @@ class Config:
                 "18S rRNA[rRNA]",
                 "SSU rRNA[rRNA]",
                 "rrn18[rRNA]",
+                '"small subunit ribosomal RNA"[Title]',
             ],
             "23s": [
                 "23S ribosomal RNA[Gene]",
@@ -335,6 +336,7 @@ class Config:
                 "28S rRNA[rRNA]",
                 "LSU rRNA[rRNA]",
                 "rrn28[rRNA]",
+                '"large subunit ribosomal RNA"[Title]',
             ],
             "12s": [
                 "12S ribosomal RNA[Gene]",
@@ -441,18 +443,18 @@ class Config:
                 "RuBisCO[Gene]",
                 '"rbcL gene"[Gene]',
                 '"RBCL gene"[Gene]',
-                '"ribulose-1,5-bisphosphate carboxylase/oxygenase large '
-                'subunit"[Protein Name]',
-                '"ribulose 1,5-bisphosphate carboxylase/oxygenase large '
-                'subunit"[Protein Name]',
+                ('"ribulose-1,5-bisphosphate carboxylase/oxygenase large '
+                'subunit"[Protein Name]'),
+                ('"ribulose 1,5-bisphosphate carboxylase/oxygenase large '
+                'subunit"[Protein Name]'),
                 '"ribulose bisphosphate carboxylase large chain"[Protein Name]',
                 '"RuBisCO large subunit"[Protein Name]',
-                '"ribulose-1,5-bisphosphate carboxylase/oxygenase small '
-                'subunit"[Protein Name]',
-                '"ribulose 1,5-bisphosphate carboxylase/oxygenase small '
-                'subunit"[Protein Name]',
-                '"ribulose-1,5-bisphosphate carboxylase/oxygenase small '
-                'chain"[Protein Name]',
+                ('"ribulose-1,5-bisphosphate carboxylase/oxygenase small '
+                'subunit"[Protein Name]'),
+                ('"ribulose 1,5-bisphosphate carboxylase/oxygenase small '
+                'subunit"[Protein Name]'),
+                ('"ribulose-1,5-bisphosphate carboxylase/oxygenase small '
+                'chain"[Protein Name]'),
                 '"RuBisCO small subunit"[Protein Name]',
 
             ],
