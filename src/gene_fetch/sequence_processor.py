@@ -1285,6 +1285,9 @@ class SequenceProcessor:
                 search_exclusions = ""
                 if gene_name.lower() in self.config._rRNA_genes:
                     search_exclusions = " NOT methylase[Title] NOT methyltransferase[Title] NOT pseudouridylate[Title] NOT synthase[Title]"
+                # Exclude mitochondrial SSU/LSU records matched by "small/large subunit ribosomal RNA" title terms
+                if gene_name.lower() in ("18s", "28s"):
+                    search_exclusions += " NOT mitochondrion[filter] NOT mitochondrial[Title]"
 
                 if fetch_all and self.config.nucleotide_length_threshold <= 0:
                     nucleotide_search = f"{self.config.gene_search_term}{search_exclusions} AND txid{current_taxid}[Organism:exp]"
@@ -1782,7 +1785,6 @@ class SequenceProcessor:
 
         # Define alternative names for different rRNA types
         rRNA_alternatives = {
-            "16s": ["16s", "rrs", "rrn16", "ssu", "small subunit", "s-rrna"],  # Small subunit bacterial
             "18s": ["18s", "rrn18", "ssu", "small subunit"],  # Small subunit eukaryotic
             "23s": ["23s", "rrl", "rrn23", "lsu", "large subunit", "l-rrna"],  # Large subunit bacterial
             "28s": ["28s", "rrn28", "lsu", "large subunit", "l-rrna"],  # Large subunit eukaryotic

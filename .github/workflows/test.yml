@@ -2,49 +2,117 @@ name: Test gene-fetch
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  lint:
+    name: Lint (ruff)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.11']  # Test min and newer version
-    
     steps:
     - uses: actions/checkout@v4
-    
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install ruff
+      run: pip install "ruff==0.16.9"
+
+    # Checks for bug-prone patterns only (not code style):
+    #   E9, F63, F7, F82 - syntax errors and undefined names
+    #   F601             - repeated dictionary keys (later entry silently replaces the earlier one)
+    #   ISC004           - implicit string concatenation in a list (usually a missing comma)
+    - name: Run ruff
+      run: ruff check --isolated --preview --select E9,F63,F7,F82,F601,ISC004 --output-format github src tests
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # pyproject.toml declares python >= 3.9
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+
+    steps:
+    - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        cache: pip
+        cache-dependency-path: pyproject.toml
 
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
+    # Install the package the same way users get it from PyPI/Bioconda
+    - name: Install package and test dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e . pytest
 
-    - name: Install dependencies
-      run: poetry install
+    - name: Check version strings agree
+      run: |
+        python - <<'EOF'
+        import importlib.metadata as md
+        import gene_fetch
+        pyproject_version = md.version("gene-fetch")
+        init_version = gene_fetch.__version__
+        if pyproject_version != init_version:
+            raise SystemExit(
+                f"Version mismatch: pyproject.toml has {pyproject_version}, "
+                f"src/gene_fetch/__init__.py has {init_version}"
+            )
+        print(f"✓ Version {pyproject_version} consistent")
+        EOF
 
     - name: Run tests
-      run: poetry run pytest
+      run: pytest
 
-    - name: Test CLI help and version
+    - name: CLI smoke tests
       run: |
-        poetry run gene-fetch --help
-        echo "✓ CLI help command works"
-        
-    - name: Test CLI properly rejects invalid credentials (expected failure)
+        gene-fetch --help > /dev/null
+        echo "✓ CLI help works"
+        gene-fetch --version
+        echo "✓ CLI version works"
+        # Missing required arguments (email, API key, input) must be rejected
+        if gene-fetch -g cox1 --type protein -o ./test_output 2>/dev/null; then
+          echo "::error::CLI accepted a command with missing required arguments"
+          exit 1
+        fi
+        echo "✓ CLI rejects missing required arguments"
+
+  ncbi:
+    name: Live NCBI checks
+    # Secrets are unavailable to pull requests from forks, so run on pushes and manual runs only
+    if: github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: pip
+        cache-dependency-path: pyproject.toml
+
+    - name: Install package
       run: |
-        # Test missing required parameters
-        poetry run gene-fetch -g cox1 --type protein -o ./test_output && exit 1 || echo "✓ CLI fails gracefully without email/api-key"
-        
-        # Test invalid email format
-        # poetry run gene-fetch -e "invalid-email" -k "valid_test_key_12345" -g cox1 --type protein -i tests/data/test_samples.csv -o ./test_output && exit 1 || echo "✓ CLI handles invalid email format"
-        
-        # Test invalid API key
-        # poetry run gene-fetch -e "test@example.com" -k "fake_key" -g cox1 --type protein -i tests/data/test_samples.csv -o ./test_output && exit 1 || echo "✓ CLI handles invalid API key"
+        python -m pip install --upgrade pip
+        pip install -e .
 
     - name: Test CLI accepts valid inputs and rejects invalid ones
       env:
@@ -54,17 +122,16 @@ jobs:
         # Only run if secrets are available
         if [ -n "$NCBI_EMAIL" ] && [ -n "$NCBI_API_KEY" ]; then
           echo "Testing with real NCBI credentials..."
-          
+
           # Test missing input file (should fail for file reasons, not credential reasons)
-          poetry run gene-fetch -e "$NCBI_EMAIL" -k "$NCBI_API_KEY" -g cox1 --type protein -i nonexistent.csv -o ./test_output && exit 1 || echo "✓ CLI handles missing input files"
-          
+          gene-fetch -e "$NCBI_EMAIL" -k "$NCBI_API_KEY" -g cox1 --type protein -i nonexistent.csv -o ./test_output && exit 1 || echo "✓ CLI handles missing input files"
+
           echo "✓ Credential and file validation tests passed"
-          
+
         else
           echo "⚠️  NCBI credentials not available - skipping real credential tests"
-          echo "   (This is normal for external contributors)"
         fi
-        
+
     - name: Test CLI with test data (parameter parsing and execution)
       env:
         NCBI_EMAIL: ${{ secrets.NCBI_EMAIL }}
@@ -74,9 +141,9 @@ jobs:
         if [ -n "$NCBI_EMAIL" ] && [ -n "$NCBI_API_KEY" ]; then
           echo "Testing CLI with real test data and valid credentials..."
           mkdir -p test_output
-          
+
           # Test with actual test data - should succeed and create output
-          timeout 60s poetry run gene-fetch \
+          timeout 60s gene-fetch \
             -e "$NCBI_EMAIL" \
             -k "$NCBI_API_KEY" \
             -g cox1 \
@@ -84,9 +151,9 @@ jobs:
             -i tests/data/test_samples.csv \
             -o test_output \
             --protein-size 100 && echo "✓ CLI successfully processed test data" || echo "⚠️ CLI processing timed out or failed (may be expected for some test data)"
-          
+
           # Test single mode with valid taxid from your test data
-          timeout 60s poetry run gene-fetch \
+          timeout 60s gene-fetch \
             -e "$NCBI_EMAIL" \
             -k "$NCBI_API_KEY" \
             -g cox1 \
@@ -95,23 +162,14 @@ jobs:
             -o test_output \
             --max-sequences 2 \
             --genbank && echo "✓ CLI single mode processing succeeded" || echo "⚠️ CLI single mode timed out or failed"
-          
+
           # Verify output files were created
           if [ -f "test_output/sequence_references.csv" ] || [ -f "test_output/failed_searches.csv" ]; then
             echo "✓ CLI created expected output files"
           else
             echo "⚠️ No output files found (may be expected if no sequences found)"
           fi
-          
-          # Verify output directory structure is created
-          [ -d "test_output" ] && echo "✓ Output directory created" || echo "✗ Output directory not created"
-          
+
         else
           echo "⚠️ NCBI credentials not available - skipping real execution tests"
-          echo "   Testing parameter parsing only..."
-          
-          # Fallback: just test that parameters are parsed without API calls
-          mkdir -p test_output
-          echo "✓ Output directory created"
-          echo "✓ Parameter parsing test skipped (no credentials)"
         fi
