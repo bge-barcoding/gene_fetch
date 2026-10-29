@@ -49,8 +49,25 @@ jobs:
     - name: Run tests
       run: pytest
 
+    # Start from an empty dist/ so only this release's files can be uploaded
     - name: Build sdist and wheel
-      run: python -m build
+      run: |
+        rm -rf dist
+        python -m build
+
+    - name: Check only this version was built
+      env:
+        TAG: ${{ github.event.release.tag_name }}
+      run: |
+        VERSION="${TAG#v}"
+        ls -l dist/
+        if [ "$(ls dist | wc -l)" -ne 2 ] \
+          || [ ! -f "dist/gene_fetch-${VERSION}.tar.gz" ] \
+          || [ ! -f "dist/gene_fetch-${VERSION}-py3-none-any.whl" ]; then
+          echo "::error::dist/ must contain exactly gene_fetch-${VERSION}.tar.gz and gene_fetch-${VERSION}-py3-none-any.whl"
+          exit 1
+        fi
+        echo "✓ dist/ contains only version ${VERSION}"
 
     - name: Check distribution metadata
       run: twine check --strict dist/*
@@ -80,3 +97,6 @@ jobs:
 
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        # Skip files already on PyPI, so a partly-failed release can be re-run
+        skip-existing: true
